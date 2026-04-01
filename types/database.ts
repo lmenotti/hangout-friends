@@ -30,18 +30,21 @@ export type Database = {
           user_id: string
           day_of_week: number
           hour: number
+          minute: number
         }
         Insert: {
           id?: string
           user_id: string
           day_of_week: number
           hour: number
+          minute?: number
         }
         Update: {
           id?: string
           user_id?: string
           day_of_week?: number
           hour?: number
+          minute?: number
         }
       }
       ideas: {

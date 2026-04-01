@@ -24,46 +24,49 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Need at least 2 upvotes to auto-schedule.' }, { status: 400 })
   }
 
-  // Get availability of voters only
+  // Get availability of voters only (includes minute for half-hour granularity)
   const { data: voterAvailability } = await supabase
     .from('availability')
-    .select('day_of_week, hour, user_id')
+    .select('day_of_week, hour, minute, user_id')
     .in('user_id', voterIds)
 
   if (!voterAvailability || voterAvailability.length === 0) {
     return NextResponse.json({ error: 'None of the voters have filled in their availability yet.' }, { status: 400 })
   }
 
-  // Find slots blocked by existing event RSVPs for any voter
+  // Find hour-level slots blocked by existing event RSVPs for any voter
+  // (auto-scheduler operates at hour granularity)
   const { data: eventRsvps } = await supabase
     .from('rsvps')
     .select('user_id, status, events(scheduled_at, end_time)')
     .in('user_id', voterIds)
     .in('status', ['yes', 'maybe'])
 
-  const blockedSlots = new Set<string>()
+  const blockedHours = new Set<string>()  // "day-hour" keys
   for (const rsvp of eventRsvps ?? []) {
     const event = (rsvp as any).events
     if (!event?.scheduled_at) continue
     const start = new Date(event.scheduled_at)
-    const startHour = start.getHours()
+    const startHour = start.getUTCHours()
+    const startDay = start.getUTCDay()
     let endHour = startHour + 1
     if (event.end_time) {
       const end = new Date(event.end_time)
-      endHour = end.getHours() + (end.getMinutes() > 0 ? 1 : 0)
+      endHour = end.getUTCHours() + (end.getUTCMinutes() > 0 ? 1 : 0)
     }
     for (let h = startHour; h < endHour; h++) {
-      blockedSlots.add(`${start.getDay()}-${h}`)
+      blockedHours.add(`${startDay}-${h}`)
     }
   }
 
-  // Build per-slot voter count
+  // Build per-hour voter count — voter counts for an hour if they have ANY slot in that hour
   const aggregate: Record<string, Set<string>> = {}
   for (const row of voterAvailability) {
-    const key = `${row.day_of_week}-${row.hour}`
-    if (blockedSlots.has(key)) continue
-    if (!aggregate[key]) aggregate[key] = new Set()
-    aggregate[key].add(row.user_id)
+    const minute = (row as any).minute ?? 0
+    const hourKey = `${row.day_of_week}-${row.hour}`
+    if (blockedHours.has(hourKey)) continue
+    if (!aggregate[hourKey]) aggregate[hourKey] = new Set()
+    aggregate[hourKey].add(row.user_id)
   }
 
   // Find slots where at least 2 voters overlap

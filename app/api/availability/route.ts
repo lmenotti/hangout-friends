@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const { data: allAvailability } = await supabase
     .from('availability')
-    .select('day_of_week, hour, user_id, users(name)')
+    .select('day_of_week, hour, minute, user_id, users(name)')
 
   const { data: allUsers } = await supabase.from('users').select('id, name').order('name')
   const totalUsers = allUsers?.length ?? 0
@@ -23,52 +23,23 @@ export async function GET(req: NextRequest) {
 
   const aggregate: Record<string, number> = {}
   const namesPerSlot: Record<string, string[]> = {}
-  const userSlots: Set<string> = new Set()
+  const userSlots: string[] = []
 
   for (const row of allAvailability ?? []) {
-    const key = `${row.day_of_week}-${row.hour}`
+    const minute = (row as any).minute ?? 0
+    const key = `${row.day_of_week}-${row.hour}-${minute}`
     aggregate[key] = (aggregate[key] ?? 0) + 1
     if (!namesPerSlot[key]) namesPerSlot[key] = []
     namesPerSlot[key].push((row as any).users?.name ?? 'Unknown')
-    if (user && row.user_id === user.id) userSlots.add(key)
-  }
-
-  // Build event slots for the current user (yes/maybe RSVPs → day+hour blocks)
-  const eventSlots: Record<string, 'yes' | 'maybe'> = {}
-  if (user) {
-    const { data: rsvps } = await supabase
-      .from('rsvps')
-      .select('status, events(scheduled_at, end_time)')
-      .eq('user_id', user.id)
-      .in('status', ['yes', 'maybe'])
-
-    for (const rsvp of rsvps ?? []) {
-      const event = (rsvp as any).events
-      if (!event?.scheduled_at) continue
-      const start = new Date(event.scheduled_at)
-      const dayOfWeek = start.getDay()
-      const startHour = start.getHours()
-      let endHour = startHour + 1
-      if (event.end_time) {
-        const end = new Date(event.end_time)
-        endHour = end.getHours() + (end.getMinutes() > 0 ? 1 : 0)
-      }
-      for (let h = startHour; h < endHour; h++) {
-        const key = `${dayOfWeek}-${h}`
-        if (!eventSlots[key] || rsvp.status === 'yes') {
-          eventSlots[key] = rsvp.status as 'yes' | 'maybe'
-        }
-      }
-    }
+    if (user && row.user_id === user.id) userSlots.push(key)
   }
 
   return NextResponse.json({
     aggregate,
     namesPerSlot,
-    userSlots: Array.from(userSlots),
+    userSlots,
     totalUsers,
     memberNames,
-    eventSlots,
   })
 }
 
@@ -82,10 +53,11 @@ export async function POST(req: NextRequest) {
   await supabase.from('availability').delete().eq('user_id', user.id)
 
   if (slots.length > 0) {
-    const rows = slots.map((s: { day_of_week: number; hour: number }) => ({
+    const rows = slots.map((s: { day_of_week: number; hour: number; minute?: number }) => ({
       user_id: user.id,
       day_of_week: s.day_of_week,
       hour: s.hour,
+      minute: s.minute ?? 0,
     }))
     const { error } = await supabase.from('availability').insert(rows)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
