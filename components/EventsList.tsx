@@ -31,6 +31,16 @@ function toDatetimeLocal(iso: string) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+// Convert a datetime-local string (no timezone) back to UTC ISO.
+// Uses explicit Date constructor args so it's always treated as local time,
+// avoiding the Safari/Chrome inconsistency with Date("YYYY-MM-DDTHH:MM").
+function datetimeLocalToISO(dtLocal: string): string {
+  const [datePart, timePart] = dtLocal.split('T')
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hour, minute] = timePart.split(':').map(Number)
+  return new Date(year, month - 1, day, hour, minute).toISOString()
+}
+
 function LocationLink({ location }: { location: string }) {
   const isUrl = /^https?:\/\//i.test(location)
   const href = isUrl ? location : `https://maps.google.com/?q=${encodeURIComponent(location)}`
@@ -102,8 +112,8 @@ function EventCard({ event, token, viewerTravel, onRsvp, onDelete, onSaved }: {
         body: JSON.stringify({
           title: editTitle,
           description: editDesc,
-          scheduled_at: editScheduled ? new Date(editScheduled).toISOString() : null,
-          end_time: editEnd ? new Date(editEnd).toISOString() : null,
+          scheduled_at: editScheduled ? datetimeLocalToISO(editScheduled) : null,
+          end_time: editEnd ? datetimeLocalToISO(editEnd) : null,
           location: editLocation || null,
         }),
       })
@@ -333,7 +343,12 @@ export default function EventsList({ upcomingOnly = false }: { upcomingOnly?: bo
     if (!res.ok) return
     const times: TravelTimes[] = await res.json()
     const map: Record<string, TravelTimes> = {}
-    withLoc.forEach((e, i) => { map[e.id] = times[i] })
+    withLoc.forEach((e, i) => {
+      const t = times[i]
+      if (t && (t.car !== null || t.transit !== null || t.walk !== null)) {
+        map[e.id] = t
+      }
+    })
     setViewerTravelMap(map)
   }
 
