@@ -73,9 +73,10 @@ export default function ProfilePage() {
           <PlacesInput
             value={homeLocation}
             onChange={setHomeLocation}
-            placeholder="Address or neighborhood"
+            placeholder="e.g. 123 Main St, Berkeley, CA"
             className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
           />
+          <p className="text-xs text-zinc-600">Include street, city, and state for accurate commute estimates.</p>
           {error && <p className="text-xs text-red-400">{error}</p>}
           <button
             onClick={handleSaveLocation}

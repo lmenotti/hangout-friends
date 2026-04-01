@@ -360,14 +360,18 @@ function IdeaCard({ idea, token, viewerTravel, viewerOrigin, onVote, onScheduled
             )}
           </div>
 
-          {(transitTime || carTime || walkTime) && (
+          {(transitTime || carTime || walkTime) ? (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
               <span className="text-xs text-zinc-600">{travelLabel}:</span>
               {walkTime && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚶</span><span>{walkTime}</span></span>}
               {transitTime && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚌</span><span>{transitTime}</span></span>}
               {carTime && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚗</span><span>{carTime}</span></span>}
             </div>
-          )}
+          ) : (idea.location && token && !user?.home_location) ? (
+            <a href="/profile" className="text-xs text-zinc-700 hover:text-zinc-500 transition-colors">
+              Set home location for commute estimate →
+            </a>
+          ) : null}
 
           <div className="flex flex-wrap items-center gap-x-2 mt-1.5">
             <p className="text-xs text-zinc-600">by {idea.creator_name}</p>
@@ -471,7 +475,12 @@ export default function IdeasBoard({ showSchedule = false }: { showSchedule?: bo
     if (!res.ok) return
     const times: TravelTimes[] = await res.json()
     const map: Record<string, TravelTimes> = {}
-    withLoc.forEach((idea, i) => { map[idea.id] = times[i] })
+    withLoc.forEach((idea, i) => {
+      const t = times[i]
+      if (t && (t.car !== null || t.transit !== null || t.walk !== null)) {
+        map[idea.id] = t
+      }
+    })
     setViewerTravelMap(map)
   }
 

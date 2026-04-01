@@ -25,7 +25,15 @@ export async function POST(req: NextRequest) {
     if (res.status !== 'fulfilled' || !res.value.ok) return (destinations as string[]).map(() => null)
     try {
       const json = await res.value.json()
+      if (json?.status && json.status !== 'OK') {
+        console.error('[travel-time] Google API error:', json.status, json.error_message ?? '')
+        return (destinations as string[]).map(() => null)
+      }
       return (json?.rows?.[0]?.elements ?? []).map((el: any) => {
+        if (el?.status && el.status !== 'OK') {
+          console.warn('[travel-time] element status:', el.status)
+          return null
+        }
         const secs = el?.duration?.value
         return typeof secs === 'number' ? Math.round(secs / 60) : null
       })
