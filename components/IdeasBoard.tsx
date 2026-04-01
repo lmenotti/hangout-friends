@@ -36,6 +36,13 @@ function toDatetimeLocal(iso: string) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+function datetimeLocalToISO(dtLocal: string): string {
+  const [datePart, timePart] = dtLocal.split('T')
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hour, minute] = timePart.split(':').map(Number)
+  return new Date(year, month - 1, day, hour, minute).toISOString()
+}
+
 function IdeaCard({ idea, token, viewerTravel, viewerOrigin, onVote, onScheduled, onDelete, onSaved }: {
   idea: IdeaWithVotes
   token: string | null
@@ -111,7 +118,7 @@ function IdeaCard({ idea, token, viewerTravel, viewerOrigin, onVote, onScheduled
           duration_minutes: Math.round(parseFloat(editDuration) * 60),
           is_outdoor: editOutdoor,
           location: editLocation || null,
-          suggested_at: editSuggested || null,
+          suggested_at: editSuggested ? datetimeLocalToISO(editSuggested) : null,
         }),
       })
       if (res.ok) {
