@@ -29,6 +29,7 @@ type GridState = {
   userSlots: Set<string>
   totalUsers: number
   memberNames: string[]
+  eventSlots: Record<string, 'yes' | 'maybe'>
 }
 
 /** Who is marked free for this slot, including unsaved local edits for the current user. */
@@ -60,8 +61,17 @@ function isPersonFreeAt(
   return (grid.namesPerSlot[key] ?? []).includes(personName)
 }
 
-function slotBg(count: number, total: number, isUser: boolean, isEditing: boolean): string {
+function slotBg(
+  count: number,
+  total: number,
+  isUser: boolean,
+  isEditing: boolean,
+  eventStatus?: 'yes' | 'maybe' | null,
+): string {
   const base = 'rounded-sm transition-colors duration-75'
+  // Event slots take priority in view mode (not in edit mode)
+  if (!isEditing && eventStatus === 'yes')   return `${base} bg-indigo-500`
+  if (!isEditing && eventStatus === 'maybe') return `${base} bg-indigo-900`
   if (isEditing) {
     return isUser ? `${base} bg-violet-500` : `${base} bg-zinc-800`
   }
@@ -88,7 +98,7 @@ function slotBgSoloPerson(personFree: boolean): string {
 export default function AvailabilityGrid() {
   const { user, token } = useUser()
   const [grid, setGrid] = useState<GridState>({
-    aggregate: {}, namesPerSlot: {}, userSlots: new Set(), totalUsers: 0, memberNames: [],
+    aggregate: {}, namesPerSlot: {}, userSlots: new Set(), totalUsers: 0, memberNames: [], eventSlots: {},
   })
   const [localSlots, setLocalSlots] = useState<Set<string>>(new Set())
   const paintingRef = useRef<boolean | null>(null)
@@ -124,6 +134,7 @@ export default function AvailabilityGrid() {
           userSlots: new Set(data.userSlots),
           totalUsers: data.totalUsers,
           memberNames: data.memberNames ?? [],
+          eventSlots: data.eventSlots ?? {},
         })
         setLocalSlots(new Set(data.userSlots))
       })
@@ -169,6 +180,7 @@ export default function AvailabilityGrid() {
     const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null
     const key = el?.dataset?.cell
     if (!key) return
+    if (grid.eventSlots[key]) return  // don't paint over event slots
     const adding = !localSlots.has(key)
     paintingRef.current = adding
     paintKey(key, adding)
@@ -180,7 +192,7 @@ export default function AvailabilityGrid() {
     const touch = e.touches[0]
     const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null
     const key = el?.dataset?.cell
-    if (key) paintKey(key, paintingRef.current)
+    if (key && !grid.eventSlots[key]) paintKey(key, paintingRef.current)
   }
 
   const onTouchEnd = () => {
@@ -264,6 +276,8 @@ export default function AvailabilityGrid() {
         const key = `${dayJs}-${hour}`
         const count = grid.aggregate[key] ?? 0
         const isUser = localSlots.has(key)
+        const eventStatus = grid.eventSlots[key] ?? null
+        const isEventSlot = !editing && eventStatus !== null
         const solo =
           filterMember !== null &&
           !editing &&
@@ -271,15 +285,15 @@ export default function AvailabilityGrid() {
         const cellClass =
           filterMember !== null && !editing
             ? slotBgSoloPerson(solo)
-            : slotBg(count, grid.totalUsers, isUser, editing)
+            : slotBg(count, grid.totalUsers, isUser, editing, eventStatus)
         return (
           <div
             key={dayJs}
             data-cell={key}
-            className={`mx-px ${flexRows ? '' : 'h-10'} ${cellClass} ${editing ? 'cursor-pointer' : ''}`}
-            onMouseDown={() => onMouseDown(dayJs, hour)}
+            className={`mx-px ${flexRows ? '' : 'h-10'} ${cellClass} ${editing && !isEventSlot ? 'cursor-pointer' : ''}`}
+            onMouseDown={() => { if (!isEventSlot) onMouseDown(dayJs, hour) }}
             onMouseEnter={() => {
-              onMouseEnter(dayJs, hour)
+              if (!isEventSlot) onMouseEnter(dayJs, hour)
               if (paintingRef.current === null) setFocusedSlotKey(key)
             }}
             onClick={() => {
@@ -527,6 +541,8 @@ export default function AvailabilityGrid() {
               <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-slate-700" />Some overlap</div>
               <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-sky-500" />Strong overlap</div>
               <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-violet-500" />You&apos;re free</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-indigo-500" />Event (going)</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-indigo-900" />Event (maybe)</div>
             </>
           )}
         </div>
