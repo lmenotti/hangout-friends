@@ -38,6 +38,11 @@ Current behavior is very naive (picks the single slot with most voter overlap). 
 - **Weather warning** — flag if an outdoor event is scheduled on a day with rain/snow in the forecast
 - Likely API: Open-Meteo (free, no key needed) or OpenWeatherMap
 
+### Built-in Calender
+- **Calendar integration** Needed if google calendar integration is wanted for displaying visibility without the user needing to fill in parts their calendar already says
+- **Reduced redundancy** Allows for the user to change availability for future references instead of needing to change it multiple times after day has passed
+- Libraries to use: React has a already built library for calendars which will just require implementing it, it also uses formats that other calendars use, so importing and exporting is easier
+
 ---
 
 ## Medium-term
