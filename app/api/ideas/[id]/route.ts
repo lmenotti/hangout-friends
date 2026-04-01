@@ -63,7 +63,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('ideas')
     .update({
       title: title?.trim() || existing.title,
@@ -75,10 +75,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...travelFields,
     })
     .eq('id', id)
-    .select()
-    .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const { data } = await supabase.from('ideas').select().eq('id', id).single()
   return NextResponse.json(data)
 }
 

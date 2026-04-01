@@ -101,27 +101,32 @@ function IdeaCard({ idea, token, viewerTravel, viewerOrigin, onVote, onScheduled
     if (!token || !editTitle.trim() || !editDuration) return
     setSaving(true)
     setEditError('')
-    const res = await fetch(`/api/ideas/${idea.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-user-token': token },
-      body: JSON.stringify({
-        title: editTitle,
-        description: editDesc,
-        duration_minutes: Math.round(parseFloat(editDuration) * 60),
-        is_outdoor: editOutdoor,
-        location: editLocation || null,
-        suggested_at: editSuggested || null,
-      }),
-    })
-    if (res.ok) {
-      const updated = await res.json()
-      onUpdate({ ...idea, ...updated })
-      setEditing(false)
-    } else {
-      const data = await res.json().catch(() => ({}))
-      setEditError(data.error ?? 'Failed to save.')
+    try {
+      const res = await fetch(`/api/ideas/${idea.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-user-token': token },
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDesc,
+          duration_minutes: Math.round(parseFloat(editDuration) * 60),
+          is_outdoor: editOutdoor,
+          location: editLocation || null,
+          suggested_at: editSuggested || null,
+        }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        onUpdate({ ...idea, ...updated })
+        setEditing(false)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setEditError(data.error ?? 'Failed to save.')
+      }
+    } catch {
+      setEditError('Network error. Try again.')
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   const handleDelete = async () => {

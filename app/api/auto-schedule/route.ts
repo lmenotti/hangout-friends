@@ -14,15 +14,36 @@ export async function fetchCommuteMinutes(origins: string[], destination: string
 
   const origs = origins.map(o => encodeURIComponent(o.trim())).join('|')
   const dest = encodeURIComponent(destination.trim())
-  const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origs}&destinations=${dest}&mode=driving&key=${key}`
+  const base = `https://maps.googleapis.com/maps/api/distancematrix/json`
+
+  const parseRows = async (res: Response): Promise<(number | null)[]> => {
+    try {
+      const json = await res.json()
+      if (json?.status && json.status !== 'OK') return origins.map(() => null)
+      return (json?.rows ?? []).map((row: any) => {
+        const secs = row?.elements?.[0]?.duration?.value
+        return typeof secs === 'number' ? Math.round(secs / 60) : null
+      })
+    } catch {
+      return origins.map(() => null)
+    }
+  }
 
   try {
-    const res = await fetch(url)
-    if (!res.ok) return origins.map(() => null)
-    const json = await res.json()
-    return (json?.rows ?? []).map((row: any) => {
-      const secs = row?.elements?.[0]?.duration?.value
-      return typeof secs === 'number' ? Math.round(secs / 60) : null
+    const [carRes, transitRes] = await Promise.allSettled([
+      fetch(`${base}?origins=${origs}&destinations=${dest}&mode=driving&key=${key}`),
+      fetch(`${base}?origins=${origs}&destinations=${dest}&mode=transit&key=${key}`),
+    ])
+    const carTimes = carRes.status === 'fulfilled' && carRes.value.ok
+      ? await parseRows(carRes.value) : origins.map(() => null)
+    const transitTimes = transitRes.status === 'fulfilled' && transitRes.value.ok
+      ? await parseRows(transitRes.value) : origins.map(() => null)
+
+    return origins.map((_, i) => {
+      const car = carTimes[i]
+      const transit = transitTimes[i]
+      if (car !== null && transit !== null) return Math.min(car, transit)
+      return car ?? transit
     })
   } catch {
     return origins.map(() => null)

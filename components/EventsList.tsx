@@ -95,26 +95,31 @@ function EventCard({ event, token, viewerTravel, onRsvp, onDelete, onUpdate }: {
     if (!token || !editTitle.trim()) return
     setSaving(true)
     setEditError('')
-    const res = await fetch(`/api/events/${event.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-user-token': token },
-      body: JSON.stringify({
-        title: editTitle,
-        description: editDesc,
-        scheduled_at: editScheduled || null,
-        end_time: editEnd || null,
-        location: editLocation || null,
-      }),
-    })
-    if (res.ok) {
-      const updated = await res.json()
-      onUpdate({ ...event, ...updated })
-      setEditing(false)
-    } else {
-      const data = await res.json().catch(() => ({}))
-      setEditError(data.error ?? 'Failed to save.')
+    try {
+      const res = await fetch(`/api/events/${event.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-user-token': token },
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDesc,
+          scheduled_at: editScheduled || null,
+          end_time: editEnd || null,
+          location: editLocation || null,
+        }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        onUpdate({ ...event, ...updated })
+        setEditing(false)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setEditError(data.error ?? 'Failed to save.')
+      }
+    } catch {
+      setEditError('Network error. Try again.')
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   const handleDelete = async () => {

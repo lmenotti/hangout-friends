@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
 import PlacesInput from '@/components/PlacesInput'
@@ -15,6 +15,7 @@ export default function NameModal() {
   const [isReturning, setIsReturning] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const checkDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   // Admin page has its own PIN auth — don't force sign-in there
   if (loading || user || pathname === '/admin') return null
@@ -57,7 +58,23 @@ export default function NameModal() {
           <input
             type="text"
             value={name}
-            onChange={e => { setName(e.target.value); setNeedsPassword(false); setIsReturning(false); setError('') }}
+            onChange={e => {
+              const val = e.target.value
+              setName(val)
+              setNeedsPassword(false)
+              setIsReturning(false)
+              setError('')
+              clearTimeout(checkDebounce.current)
+              if (val.trim().length >= 2) {
+                checkDebounce.current = setTimeout(async () => {
+                  try {
+                    const res = await fetch(`/api/users/check?name=${encodeURIComponent(val.trim())}`)
+                    const data = await res.json()
+                    if (data.exists) setIsReturning(true)
+                  } catch { /* ignore */ }
+                }, 400)
+              }
+            }}
             placeholder="Your name"
             disabled={needsPassword}
             className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3.5 text-base text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors disabled:opacity-50"
