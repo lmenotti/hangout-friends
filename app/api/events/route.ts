@@ -74,5 +74,10 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  if (idea_id) {
+    await supabase.from('ideas').update({ is_scheduled: true }).eq('id', idea_id)
+  }
+
   return NextResponse.json(data)
 }

@@ -4,11 +4,12 @@ import { randomUUID } from 'crypto'
 import { hashPassword, verifyPassword } from '@/lib/password'
 
 export async function POST(req: NextRequest) {
-  const { name, password } = await req.json()
+  const { name, password, home_location } = await req.json()
   if (!name?.trim()) return NextResponse.json({ error: 'Name required' }, { status: 400 })
 
   const trimmedName = name.trim()
   const trimmedPassword = password?.trim() ?? ''
+  const trimmedHome = home_location?.trim() || null
 
   // Check if name is on the approved list
   const { data: approved } = await supabase
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('users')
-    .insert({ name: trimmedName, token: newToken, password_hash })
+    .insert({ name: trimmedName, token: newToken, password_hash, home_location: trimmedHome })
     .select()
     .single()
 

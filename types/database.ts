@@ -7,18 +7,21 @@ export type Database = {
           name: string
           token: string
           created_at: string
+          home_location: string | null
         }
         Insert: {
           id?: string
           name: string
           token: string
           created_at?: string
+          home_location?: string | null
         }
         Update: {
           id?: string
           name?: string
           token?: string
           created_at?: string
+          home_location?: string | null
         }
       }
       availability: {
@@ -54,6 +57,9 @@ export type Database = {
           travel_car_minutes: number | null
           travel_transit_minutes: number | null
           travel_walk_minutes: number | null
+          is_scheduled: boolean
+          suggested_at: string | null
+          travel_origin: string | null
         }
         Insert: {
           id?: string
@@ -67,6 +73,9 @@ export type Database = {
           travel_car_minutes?: number | null
           travel_transit_minutes?: number | null
           travel_walk_minutes?: number | null
+          is_scheduled?: boolean
+          suggested_at?: string | null
+          travel_origin?: string | null
         }
         Update: {
           id?: string
@@ -80,6 +89,9 @@ export type Database = {
           travel_car_minutes?: number | null
           travel_transit_minutes?: number | null
           travel_walk_minutes?: number | null
+          is_scheduled?: boolean
+          suggested_at?: string | null
+          travel_origin?: string | null
         }
       }
       idea_votes: {
@@ -166,6 +178,9 @@ export type IdeaWithVotes = Idea & {
   travel_car_minutes: number | null
   travel_transit_minutes: number | null
   travel_walk_minutes: number | null
+  is_scheduled: boolean
+  suggested_at: string | null
+  travel_origin: string | null
 }
 
 export type EventWithRSVPs = Event & {

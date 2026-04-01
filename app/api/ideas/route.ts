@@ -7,18 +7,18 @@ async function getUserFromToken(token: string | null) {
   return data
 }
 
-async function fetchTravelTimes(destination: string): Promise<{ car: number | null; transit: number | null; walk: number | null }> {
+async function fetchTravelTimes(destination: string, origin: string): Promise<{ car: number | null; transit: number | null; walk: number | null }> {
   const key = process.env.GOOGLE_MAPS_API_KEY
   if (!key || !destination.trim()) return { car: null, transit: null, walk: null }
 
-  const origin = encodeURIComponent('Berkeley, CA')
+  const orig = encodeURIComponent(origin)
   const dest = encodeURIComponent(destination)
   const base = 'https://maps.googleapis.com/maps/api/distancematrix/json'
 
   const [carRes, transitRes, walkRes] = await Promise.allSettled([
-    fetch(`${base}?origins=${origin}&destinations=${dest}&mode=driving&key=${key}`),
-    fetch(`${base}?origins=${origin}&destinations=${dest}&mode=transit&key=${key}`),
-    fetch(`${base}?origins=${origin}&destinations=${dest}&mode=walking&key=${key}`),
+    fetch(`${base}?origins=${orig}&destinations=${dest}&mode=driving&key=${key}`),
+    fetch(`${base}?origins=${orig}&destinations=${dest}&mode=transit&key=${key}`),
+    fetch(`${base}?origins=${orig}&destinations=${dest}&mode=walking&key=${key}`),
   ])
 
   const parse = async (res: PromiseSettledResult<Response>): Promise<number | null> => {
@@ -43,7 +43,8 @@ export async function GET(req: NextRequest) {
 
   const { data: ideas, error } = await supabase
     .from('ideas')
-    .select('id, title, description, created_by, created_at, duration_minutes, is_outdoor, location, travel_car_minutes, travel_transit_minutes, travel_walk_minutes')
+    .select('id, title, description, created_by, created_at, duration_minutes, is_outdoor, location, travel_car_minutes, travel_transit_minutes, travel_walk_minutes, is_scheduled, suggested_at, travel_origin')
+    .eq('is_scheduled', false)
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -74,6 +75,9 @@ export async function GET(req: NextRequest) {
       travel_car_minutes: idea.travel_car_minutes ?? null,
       travel_transit_minutes: idea.travel_transit_minutes ?? null,
       travel_walk_minutes: idea.travel_walk_minutes ?? null,
+      is_scheduled: idea.is_scheduled ?? false,
+      suggested_at: idea.suggested_at ?? null,
+      travel_origin: idea.travel_origin ?? null,
       creator_name: creatorMap[idea.created_by] ?? 'Unknown',
       vote_count: ideaVotes.length,
       user_voted: user ? ideaVotes.some((v: any) => v.user_id === user.id) : false,
@@ -89,10 +93,11 @@ export async function POST(req: NextRequest) {
   const user = await getUserFromToken(token)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { title, description, duration_minutes, is_outdoor, location } = await req.json()
+  const { title, description, duration_minutes, is_outdoor, location, suggested_at } = await req.json()
   if (!title?.trim()) return NextResponse.json({ error: 'Title required' }, { status: 400 })
 
-  const travel = location?.trim() ? await fetchTravelTimes(location.trim()) : { car: null, transit: null, walk: null }
+  const origin = (user as any).home_location?.trim() || 'Berkeley, CA'
+  const travel = location?.trim() ? await fetchTravelTimes(location.trim(), origin) : { car: null, transit: null, walk: null }
 
   const { data, error } = await supabase
     .from('ideas')
@@ -106,6 +111,8 @@ export async function POST(req: NextRequest) {
       travel_car_minutes: travel.car,
       travel_transit_minutes: travel.transit,
       travel_walk_minutes: travel.walk,
+      travel_origin: location?.trim() ? origin : null,
+      suggested_at: suggested_at || null,
     })
     .select()
     .single()

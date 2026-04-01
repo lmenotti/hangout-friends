@@ -9,7 +9,9 @@ export default function NameModal() {
   const pathname = usePathname()
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
+  const [homeLocation, setHomeLocation] = useState('')
   const [needsPassword, setNeedsPassword] = useState(false)
+  const [isReturning, setIsReturning] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -25,11 +27,11 @@ export default function NameModal() {
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, password }),
+        body: JSON.stringify({ name, password, home_location: homeLocation }),
       })
       const data = await res.json()
       if (!res.ok) {
-        if (data.needsPassword) setNeedsPassword(true)
+        if (data.needsPassword) { setNeedsPassword(true); setIsReturning(true) }
         throw new Error(data.error)
       }
       setUser(data, data.token)
@@ -54,7 +56,7 @@ export default function NameModal() {
           <input
             type="text"
             value={name}
-            onChange={e => { setName(e.target.value); setNeedsPassword(false); setError('') }}
+            onChange={e => { setName(e.target.value); setNeedsPassword(false); setIsReturning(false); setError('') }}
             placeholder="Your name"
             disabled={needsPassword}
             className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3.5 text-base text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors disabled:opacity-50"
@@ -62,6 +64,17 @@ export default function NameModal() {
             autoComplete="given-name"
             autoFocus={!needsPassword}
           />
+
+          {!isReturning && !needsPassword && (
+            <input
+              type="text"
+              value={homeLocation}
+              onChange={e => setHomeLocation(e.target.value)}
+              placeholder="Your city or neighborhood (optional)"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3.5 text-base text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              maxLength={100}
+            />
+          )}
 
           <div className="space-y-1">
             <input
