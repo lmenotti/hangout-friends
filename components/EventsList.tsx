@@ -254,20 +254,16 @@ function EventCard({ event, token, viewerTravel, onRsvp, onDelete, onUpdate }: {
 
         {event.location && <LocationLink location={event.location} />}
 
-        {viewerTravel && event.location && (() => {
-          const car = formatTravel(viewerTravel.car)
-          const transit = formatTravel(viewerTravel.transit)
-          const walk = formatTravel(viewerTravel.walk)
-          if (!car && !transit && !walk) return null
-          return (
+        {viewerTravel && event.location && (
+          (formatTravel(viewerTravel.car) || formatTravel(viewerTravel.transit) || formatTravel(viewerTravel.walk)) && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
               <span className="text-xs text-zinc-600">Your commute:</span>
-              {walk && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚶</span><span>{walk}</span></span>}
-              {transit && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚌</span><span>{transit}</span></span>}
-              {car && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚗</span><span>{car}</span></span>}
+              {formatTravel(viewerTravel.walk) && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚶</span><span>{formatTravel(viewerTravel.walk)}</span></span>}
+              {formatTravel(viewerTravel.transit) && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚌</span><span>{formatTravel(viewerTravel.transit)}</span></span>}
+              {formatTravel(viewerTravel.car) && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚗</span><span>{formatTravel(viewerTravel.car)}</span></span>}
             </div>
           )
-        })()}
+        )}
       </div>
 
       {hasRsvps && (
@@ -337,6 +333,13 @@ export default function EventsList({ upcomingOnly = false }: { upcomingOnly?: bo
   }
 
   useEffect(() => { fetchEvents() }, [token])
+
+  // Re-fetch travel times if user's home location loads after events
+  useEffect(() => {
+    if (user?.home_location && events.length > 0) {
+      fetchViewerTravel(events, user.home_location)
+    }
+  }, [user?.home_location])
 
   const handleRsvp = async (eventId: string, status: string) => {
     if (!token) return

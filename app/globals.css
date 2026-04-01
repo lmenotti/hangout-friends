@@ -35,3 +35,32 @@ body {
 /* Hide scrollbar for nav */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Google Places Autocomplete dropdown — dark theme */
+.pac-container {
+  background-color: #27272a;
+  border: 1px solid #3f3f46;
+  border-radius: 0.75rem;
+  margin-top: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+.pac-item {
+  background-color: #27272a;
+  border-top: 1px solid #3f3f46;
+  color: #d4d4d8;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+}
+.pac-item:first-child { border-top: none; }
+.pac-item:hover, .pac-item-selected {
+  background-color: #3f3f46;
+}
+.pac-item-query {
+  color: #f4f4f5;
+  font-size: 0.8125rem;
+}
+.pac-matched { color: #818cf8; }
+.pac-icon { display: none; }
+.pac-logo::after { display: none; }

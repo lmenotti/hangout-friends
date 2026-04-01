@@ -19,7 +19,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { title, description, scheduled_at, end_time, location } = await req.json()
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('events')
     .update({
       title: title?.trim() || undefined,
@@ -29,10 +29,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       location: location?.trim() || null,
     })
     .eq('id', id)
-    .select()
-    .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const { data } = await supabase.from('events').select().eq('id', id).single()
   return NextResponse.json(data)
 }
 

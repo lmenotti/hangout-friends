@@ -488,6 +488,13 @@ export default function IdeasBoard({ showSchedule = false }: { showSchedule?: bo
 
   useEffect(() => { fetchIdeas() }, [token])
 
+  // Re-fetch travel times if user's home location loads after ideas
+  useEffect(() => {
+    if (user?.home_location && ideas.length > 0) {
+      fetchViewerTravel(ideas, user.home_location)
+    }
+  }, [user?.home_location])
+
   const handleVote = async (id: string) => {
     if (!token) return
     setIdeas(prev => prev.map(idea => {
