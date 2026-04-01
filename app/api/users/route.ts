@@ -63,6 +63,24 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(data)
 }
 
+export async function PATCH(req: NextRequest) {
+  const token = req.headers.get('x-user-token')
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { home_location } = await req.json()
+  const trimmedHome = home_location?.trim() || null
+
+  const { data, error } = await supabase
+    .from('users')
+    .update({ home_location: trimmedHome })
+    .eq('token', token)
+    .select()
+    .single()
+
+  if (error || !data) return NextResponse.json({ error: error?.message ?? 'Not found' }, { status: 500 })
+  return NextResponse.json(data)
+}
+
 export async function GET(req: NextRequest) {
   const token = req.headers.get('x-user-token')
   if (!token) return NextResponse.json({ error: 'No token' }, { status: 401 })

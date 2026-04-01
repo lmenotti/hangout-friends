@@ -8,6 +8,7 @@ type UserContextType = {
   token: string | null
   loading: boolean
   setUser: (user: User, token: string) => void
+  updateUser: (user: User) => void
   clearUser: () => void
 }
 
@@ -16,6 +17,7 @@ const UserContext = createContext<UserContextType>({
   token: null,
   loading: true,
   setUser: () => {},
+  updateUser: () => {},
   clearUser: () => {},
 })
 
@@ -49,6 +51,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setToken(t)
   }
 
+  const updateUser = (u: User) => {
+    setUserState(u)
+  }
+
   const clearUser = () => {
     localStorage.removeItem('gs_token')
     setUserState(null)
@@ -56,7 +62,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <UserContext.Provider value={{ user, token, loading, setUser, clearUser }}>
+    <UserContext.Provider value={{ user, token, loading, setUser, updateUser, clearUser }}>
       {children}
     </UserContext.Provider>
   )

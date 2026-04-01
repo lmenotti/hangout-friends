@@ -7,6 +7,27 @@ async function getUserFromToken(token: string | null) {
   return data
 }
 
+async function fetchCommuteTimes(origins: string[], destination: string): Promise<(number | null)[]> {
+  const key = process.env.GOOGLE_MAPS_API_KEY
+  if (!key || !destination.trim() || origins.length === 0) return origins.map(() => null)
+
+  const origs = origins.map(o => encodeURIComponent(o.trim())).join('|')
+  const dest = encodeURIComponent(destination.trim())
+  const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origs}&destinations=${dest}&mode=driving&key=${key}`
+
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return origins.map(() => null)
+    const json = await res.json()
+    return (json?.rows ?? []).map((row: any) => {
+      const secs = row?.elements?.[0]?.duration?.value
+      return typeof secs === 'number' ? Math.round(secs / 60) : null
+    })
+  } catch {
+    return origins.map(() => null)
+  }
+}
+
 export async function POST(req: NextRequest) {
   const token = req.headers.get('x-user-token')
   const user = await getUserFromToken(token)
@@ -24,18 +45,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Need at least 2 upvotes to auto-schedule.' }, { status: 400 })
   }
 
-  // Get availability of voters only (includes minute for half-hour granularity)
-  const { data: voterAvailability } = await supabase
-    .from('availability')
-    .select('day_of_week, hour, minute, user_id')
-    .in('user_id', voterIds)
+  // Get availability + voter home locations in parallel
+  const [availResult, usersResult] = await Promise.all([
+    supabase.from('availability').select('day_of_week, hour, minute, user_id').in('user_id', voterIds),
+    supabase.from('users').select('id, home_location').in('id', voterIds),
+  ])
 
+  const voterAvailability = availResult.data
   if (!voterAvailability || voterAvailability.length === 0) {
     return NextResponse.json({ error: 'None of the voters have filled in their availability yet.' }, { status: 400 })
   }
 
+  // Build O(1) availability lookup: "userId-day-hour"
+  const availSet = new Set<string>()
+  for (const row of voterAvailability) {
+    availSet.add(`${row.user_id}-${row.day_of_week}-${row.hour}`)
+  }
+
+  // Fetch commute times if idea has a location
+  const voterCommutes: Record<string, number> = {}
+  if (idea.location?.trim() && usersResult.data) {
+    const voterUsers = usersResult.data.filter(u => u.home_location?.trim())
+    if (voterUsers.length > 0) {
+      const origins = voterUsers.map(u => u.home_location!)
+      const times = await fetchCommuteTimes(origins, idea.location)
+      voterUsers.forEach((u, i) => {
+        if (times[i] !== null) voterCommutes[u.id] = times[i]!
+      })
+    }
+  }
+
   // Find hour-level slots blocked by existing event RSVPs for any voter
-  // (auto-scheduler operates at hour granularity)
   const { data: eventRsvps } = await supabase
     .from('rsvps')
     .select('user_id, status, events(scheduled_at, end_time)')
@@ -59,14 +99,30 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Build per-hour voter count — voter counts for an hour if they have ANY slot in that hour
+  // Build per-hour voter count with commute buffer check
   const aggregate: Record<string, Set<string>> = {}
-  for (const row of voterAvailability) {
-    const minute = (row as any).minute ?? 0
-    const hourKey = `${row.day_of_week}-${row.hour}`
-    if (blockedHours.has(hourKey)) continue
-    if (!aggregate[hourKey]) aggregate[hourKey] = new Set()
-    aggregate[hourKey].add(row.user_id)
+  for (const voterId of voterIds) {
+    const commuteMinutes = voterCommutes[voterId] ?? 0
+    const bufferHours = Math.ceil(commuteMinutes / 60)
+
+    for (const row of voterAvailability.filter(r => r.user_id === voterId)) {
+      const hourKey = `${row.day_of_week}-${row.hour}`
+      if (blockedHours.has(hourKey)) continue
+
+      // Check voter has bufferHours of free time immediately before this slot
+      let hasBuffer = true
+      for (let b = 1; b <= bufferHours; b++) {
+        const bufHour = row.hour - b
+        if (bufHour < 0 || !availSet.has(`${voterId}-${row.day_of_week}-${bufHour}`)) {
+          hasBuffer = false
+          break
+        }
+      }
+      if (!hasBuffer) continue
+
+      if (!aggregate[hourKey]) aggregate[hourKey] = new Set()
+      aggregate[hourKey].add(voterId)
+    }
   }
 
   // Find slots where at least 2 voters overlap
@@ -116,8 +172,9 @@ export async function POST(req: NextRequest) {
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
   const fmt = (h: number) => `${h % 12 || 12}:00 ${h < 12 ? 'AM' : 'PM'}`
+  const commuteNote = Object.keys(voterCommutes).length > 0 ? ' (commute times factored in)' : ''
   return NextResponse.json({
     event,
-    message: `Scheduled for ${dayNames[day]} at ${fmt(hour)} — ${bestUsers.size} of ${voterIds.length} voters are free!`,
+    message: `Scheduled for ${dayNames[day]} at ${fmt(hour)} — ${bestUsers.size} of ${voterIds.length} voters are free${commuteNote}!`,
   })
 }

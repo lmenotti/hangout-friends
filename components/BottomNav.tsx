@@ -49,12 +49,12 @@ const tabs = [
     ),
   },
   {
-    href: '/bugs',
-    label: 'Report',
+    href: '/profile',
+    label: 'Profile',
     icon: (active: boolean) => (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.25 : 1.75} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-        <path d="M12 14V8M12 18h.01" />
-        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
       </svg>
     ),
   },

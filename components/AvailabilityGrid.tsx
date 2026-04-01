@@ -279,8 +279,10 @@ export default function AvailabilityGrid() {
             bg = 'bg-zinc-800'
           } else {
             const ratio = gridData.totalUsers > 0 ? count / gridData.totalUsers : 0
-            if (ratio >= 0.5)       bg = 'bg-teal-500'
-            else if (ratio >= 0.25) bg = 'bg-teal-800'
+            if (ratio >= 0.8)       bg = 'bg-teal-300'
+            else if (ratio >= 0.6)  bg = 'bg-teal-400'
+            else if (ratio >= 0.4)  bg = 'bg-teal-600'
+            else if (ratio >= 0.2)  bg = 'bg-teal-800'
             else                    bg = 'bg-teal-950'
           }
         }
@@ -412,7 +414,7 @@ export default function AvailabilityGrid() {
               </div>
 
               {/* Side roster */}
-              <aside className="w-full shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/90 p-3 lg:w-48 xl:w-52" aria-live="polite">
+              <aside className="w-full shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/90 p-3 lg:w-48 xl:w-52 flex flex-col" aria-live="polite">
                 {filterMember && (
                   <div className="mb-3 flex items-start justify-between gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-1.5">
                     <p className="text-[11px] leading-snug text-amber-100/90">
@@ -432,7 +434,7 @@ export default function AvailabilityGrid() {
                   <>
                     <p className="mt-1 text-sm font-medium text-zinc-100">{slotDisplayLabel(focusedKey)}</p>
                     <p className="mt-1.5 text-[10px] text-zinc-500">Click a name to filter the grid.</p>
-                    <ul className="mt-2 max-h-[min(22rem,55vh)] space-y-0.5 overflow-y-auto pr-0.5">
+                    <ul className="mt-2 flex-1 min-h-0 space-y-0.5 overflow-y-auto pr-0.5">
                       {gridData.memberNames.map((name, i) => {
                         const free = (gridData.namesPerSlot[focusedKey] ?? []).includes(name)
                         const filtered = filterMember === name
@@ -458,7 +460,7 @@ export default function AvailabilityGrid() {
                 ) : (
                   <>
                     <p className="mt-2 text-xs text-zinc-500 leading-relaxed">Hover a slot to see who's available. Click a name to solo their schedule.</p>
-                    <ul className="mt-3 max-h-[min(14rem,40vh)] space-y-0.5 overflow-y-auto pr-0.5">
+                    <ul className="mt-3 flex-1 min-h-0 space-y-0.5 overflow-y-auto pr-0.5">
                       {gridData.memberNames.map((name, i) => {
                         const filtered = filterMember === name
                         return (
@@ -482,21 +484,6 @@ export default function AvailabilityGrid() {
               </aside>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-zinc-600">
-              {filterMember ? (
-                <>
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-zinc-800" />Not free</div>
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-amber-500" />{filterMember} free</div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-zinc-800" />Nobody free</div>
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-teal-950" />Few free</div>
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-teal-800" />Some free</div>
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-teal-500" />Most free</div>
-                </>
-              )}
-            </div>
           </div>
         )}
       </div>
