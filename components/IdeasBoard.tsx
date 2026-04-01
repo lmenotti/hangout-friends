@@ -36,7 +36,7 @@ function toDatetimeLocal(iso: string) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-function IdeaCard({ idea, token, viewerTravel, viewerOrigin, onVote, onScheduled, onDelete, onUpdate }: {
+function IdeaCard({ idea, token, viewerTravel, viewerOrigin, onVote, onScheduled, onDelete, onSaved }: {
   idea: IdeaWithVotes
   token: string | null
   viewerTravel: TravelTimes | null
@@ -44,7 +44,7 @@ function IdeaCard({ idea, token, viewerTravel, viewerOrigin, onVote, onScheduled
   onVote: (id: string) => void
   onScheduled: (id: string) => void
   onDelete: (id: string) => void
-  onUpdate: (idea: IdeaWithVotes) => void
+  onSaved: () => void
 }) {
   const { user } = useUser()
   const isOwner = !!user && user.id === idea.created_by
@@ -115,9 +115,8 @@ function IdeaCard({ idea, token, viewerTravel, viewerOrigin, onVote, onScheduled
         }),
       })
       if (res.ok) {
-        const updated = await res.json()
-        onUpdate({ ...idea, ...updated })
         setEditing(false)
+        onSaved()
       } else {
         const data = await res.json().catch(() => ({}))
         setEditError(data.error ?? 'Failed to save.')
@@ -683,7 +682,7 @@ export default function IdeasBoard({ showSchedule = false }: { showSchedule?: bo
               onVote={handleVote}
               onScheduled={id => setIdeas(prev => prev.filter(i => i.id !== id))}
               onDelete={id => setIdeas(prev => prev.filter(i => i.id !== id))}
-              onUpdate={updated => setIdeas(prev => prev.map(i => i.id === updated.id ? updated : i))}
+              onSaved={fetchIdeas}
             />
           ))}
         </div>

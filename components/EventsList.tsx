@@ -57,13 +57,13 @@ function RSVPNames({ names, label, color }: { names: string[]; label: string; co
   )
 }
 
-function EventCard({ event, token, viewerTravel, onRsvp, onDelete, onUpdate }: {
+function EventCard({ event, token, viewerTravel, onRsvp, onDelete, onSaved }: {
   event: EventWithRSVPs
   token: string | null
   viewerTravel: TravelTimes | null
   onRsvp: (id: string, status: string) => void
   onDelete: (id: string) => void
-  onUpdate: (event: EventWithRSVPs) => void
+  onSaved: () => void
 }) {
   const { user } = useUser()
   const isOwner = !!user && (event.created_by === null || user.id === event.created_by)
@@ -108,9 +108,8 @@ function EventCard({ event, token, viewerTravel, onRsvp, onDelete, onUpdate }: {
         }),
       })
       if (res.ok) {
-        const updated = await res.json()
-        onUpdate({ ...event, ...updated })
         setEditing(false)
+        onSaved()
       } else {
         const data = await res.json().catch(() => ({}))
         setEditError(data.error ?? 'Failed to save.')
@@ -390,7 +389,7 @@ export default function EventsList({ upcomingOnly = false }: { upcomingOnly?: bo
     viewerTravel: viewerTravelMap[e.id] ?? null,
     onRsvp: handleRsvp,
     onDelete: (id: string) => setEvents(prev => prev.filter(ev => ev.id !== id)),
-    onUpdate: (updated: EventWithRSVPs) => setEvents(prev => prev.map(ev => ev.id === updated.id ? { ...ev, ...updated } : ev)),
+    onSaved: fetchEvents,
   })
 
   return (
