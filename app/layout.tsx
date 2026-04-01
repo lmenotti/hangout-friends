@@ -32,11 +32,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </main>
           <BottomNav />
         </UserProvider>
-        <Script
-          id="google-maps"
-          src={`https://maps.googleapis.com/maps/api/js?key=${process.env.GOOGLE_MAPS_API_KEY}&libraries=places`}
-          strategy="afterInteractive"
-        />
       </body>
     </html>
   )

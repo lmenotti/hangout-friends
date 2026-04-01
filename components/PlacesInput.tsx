@@ -9,69 +9,14 @@ interface Props {
   className?: string
 }
 
-declare global {
-  interface Window { google: any }
-}
-
 export default function PlacesInput({ value, onChange, placeholder, className }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const autocompleteRef = useRef<any>(null)
-  const onChangeRef = useRef(onChange)
-  onChangeRef.current = onChange
-
-  // Fallback state: if Maps JS fails to init, use server-side suggestions
-  const [useFallback, setUseFallback] = useState(false)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [open, setOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-
-  // Sync controlled value → DOM when parent changes it (e.g. form reset)
-  useEffect(() => {
-    if (inputRef.current && document.activeElement !== inputRef.current) {
-      inputRef.current.value = value
-    }
-  }, [value])
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const init = () => {
-      if (!inputRef.current || !window.google?.maps?.places || autocompleteRef.current) return
-      try {
-        autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
-          fields: ['formatted_address', 'name', 'geometry'],
-        })
-        autocompleteRef.current.addListener('place_changed', () => {
-          const place = autocompleteRef.current.getPlace()
-          const address = place?.formatted_address || place?.name || ''
-          if (address) onChangeRef.current(address)
-        })
-      } catch {
-        setUseFallback(true)
-      }
-    }
-
-    if (window.google?.maps?.places) {
-      init()
-      return
-    }
-
-    let elapsed = 0
-    const interval = setInterval(() => {
-      elapsed += 200
-      if (window.google?.maps?.places) {
-        clearInterval(interval)
-        init()
-      } else if (elapsed >= 4000) {
-        // Maps JS didn't load in time — fall back to server-side autocomplete
-        clearInterval(interval)
-        setUseFallback(true)
-      }
-    }, 200)
-    return () => clearInterval(interval)
-  }, [])
-
-  // Fallback: server-side autocomplete fetch
-  useEffect(() => {
-    if (!useFallback) return
     clearTimeout(debounceRef.current)
     if (!value.trim() || value.length < 2) {
       setSuggestions([])
@@ -83,42 +28,73 @@ export default function PlacesInput({ value, onChange, placeholder, className }:
         const res = await fetch(`/api/places/autocomplete?q=${encodeURIComponent(value)}`)
         if (!res.ok) return
         const data = await res.json()
-        const list = data.suggestions ?? []
-        setSuggestions(list)
-        setOpen(list.length > 0)
-      } catch { /* ignore */ }
+        setSuggestions(data.suggestions ?? [])
+        setOpen((data.suggestions ?? []).length > 0)
+        setActiveIndex(-1)
+      } catch {
+        // silently ignore fetch errors
+      }
     }, 250)
     return () => clearTimeout(debounceRef.current)
-  }, [value, useFallback])
+  }, [value])
 
-  const selectFallback = (s: string) => {
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const select = (s: string) => {
     onChange(s)
-    if (inputRef.current) inputRef.current.value = s
     setSuggestions([])
     setOpen(false)
+    setActiveIndex(-1)
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (!open) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex(i => Math.min(i + 1, suggestions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex(i => Math.max(i - 1, -1))
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault()
+      select(suggestions[activeIndex])
+    } else if (e.key === 'Escape') {
+      setOpen(false)
+    }
   }
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <input
-        ref={inputRef}
         type="text"
-        defaultValue={value}
+        value={value}
         onChange={e => onChange(e.target.value)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onKeyDown={onKeyDown}
+        onFocus={() => suggestions.length > 0 && setOpen(true)}
         placeholder={placeholder}
         className={className}
         autoComplete="off"
       />
-      {useFallback && open && suggestions.length > 0 && (
+      {open && suggestions.length > 0 && (
         <ul className="absolute left-0 right-0 top-full mt-1 z-50 bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden shadow-xl">
           {suggestions.map((s, i) => (
             <li key={i}>
               <button
                 type="button"
                 onMouseDown={e => e.preventDefault()}
-                onClick={() => selectFallback(s)}
-                className="w-full text-left px-3 py-2.5 text-sm flex items-start gap-2 text-zinc-200 hover:bg-zinc-700/70 transition-colors"
+                onClick={() => select(s)}
+                className={`w-full text-left px-3 py-2.5 text-sm flex items-start gap-2 transition-colors ${
+                  i === activeIndex ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-200 hover:bg-zinc-700/70'
+                }`}
               >
                 <span className="text-zinc-500 shrink-0 mt-px">📍</span>
                 <span className="flex-1 min-w-0">{s}</span>

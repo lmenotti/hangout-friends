@@ -13,7 +13,7 @@ const links = [
 
 export default function Nav() {
   const pathname = usePathname()
-  const { user, clearUser } = useUser()
+  const { user } = useUser()
 
   return (
     <nav className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur-xl">
@@ -41,15 +41,20 @@ export default function Nav() {
         </div>
         {user && (
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-sm text-zinc-400 hidden sm:block truncate max-w-[120px]">
-              <span className="text-zinc-200">{user.name}</span>
-            </span>
-            <button
-              onClick={clearUser}
-              className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors px-2 py-2 rounded-lg hover:bg-zinc-800 touch-manipulation min-h-[44px]"
+            <Link
+              href="/profile"
+              className={`text-sm px-3 py-2 rounded-lg transition-colors touch-manipulation min-h-[44px] flex items-center gap-2 ${
+                pathname === '/profile'
+                  ? 'bg-zinc-800 text-zinc-100'
+                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60'
+              }`}
             >
-              Switch
-            </button>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+              </svg>
+              <span className="hidden sm:block">{user.name}</span>
+            </Link>
           </div>
         )}
       </div>
