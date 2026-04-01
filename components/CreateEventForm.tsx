@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useUser } from '@/context/UserContext'
+import PlacesInput from '@/components/PlacesInput'
 
 export default function CreateEventForm({ onCreated }: { onCreated: () => void }) {
   const { user, token } = useUser()
@@ -122,10 +123,9 @@ export default function CreateEventForm({ onCreated }: { onCreated: () => void }
       </div>
 
       {/* Location */}
-      <input
-        type="text"
+      <PlacesInput
         value={location}
-        onChange={e => setLocation(e.target.value)}
+        onChange={setLocation}
         placeholder="Location (optional) — address or Google Maps link"
         className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-base text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
       />
