@@ -446,6 +446,13 @@ export default function IdeasBoard({ showSchedule = false }: { showSchedule?: bo
   const [submitting, setSubmitting] = useState(false)
   // Viewer-specific travel times, keyed by idea id
   const [viewerTravelMap, setViewerTravelMap] = useState<Record<string, TravelTimes>>({})
+  // Schedule-all state
+  const [schedulingAll, setSchedulingAll] = useState(false)
+  const [scheduleAllResult, setScheduleAllResult] = useState<{
+    scheduled: Array<{ idea_title: string; day: string; time: string; voters: number; weather?: string }>
+    skipped: string[]
+  } | null>(null)
+  const [scheduleAllError, setScheduleAllError] = useState('')
 
   const fetchViewerTravel = async (loadedIdeas: IdeaWithVotes[], origin: string) => {
     const withLoc = loadedIdeas.filter(i => i.location)
@@ -514,6 +521,27 @@ export default function IdeasBoard({ showSchedule = false }: { showSchedule?: bo
     setSubmitting(false)
   }
 
+  const handleScheduleAll = async () => {
+    if (!token) return
+    setSchedulingAll(true)
+    setScheduleAllResult(null)
+    setScheduleAllError('')
+    try {
+      const res = await fetch('/api/auto-schedule/all', {
+        method: 'POST',
+        headers: { 'x-user-token': token },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setScheduleAllResult(data)
+      fetchIdeas()
+    } catch (err: any) {
+      setScheduleAllError(err.message)
+    } finally {
+      setSchedulingAll(false)
+    }
+  }
+
   if (loading) return <div className="h-40 rounded-xl bg-zinc-800/50 animate-pulse" />
 
   return (
@@ -568,6 +596,47 @@ export default function IdeasBoard({ showSchedule = false }: { showSchedule?: bo
             {submitting ? 'Adding…' : 'Add idea'}
           </button>
         </form>
+      )}
+
+      {/* Schedule all */}
+      {token && ideas.filter(i => !i.is_scheduled).length >= 2 && (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-zinc-200">Auto-schedule everything</p>
+              <p className="text-xs text-zinc-500">Schedules all ideas with 2+ votes, highest-voted first.</p>
+            </div>
+            <button
+              onClick={handleScheduleAll}
+              disabled={schedulingAll}
+              className="shrink-0 px-3 py-2 text-xs font-medium rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors touch-manipulation"
+            >
+              {schedulingAll ? 'Scheduling…' : 'Schedule all'}
+            </button>
+          </div>
+          {scheduleAllError && (
+            <p className="text-xs text-red-400">{scheduleAllError}</p>
+          )}
+          {scheduleAllResult && (
+            <div className="space-y-1.5 pt-1 border-t border-zinc-800">
+              {scheduleAllResult.scheduled.map((s, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs text-zinc-300">
+                  <span className="text-emerald-400">✓</span>
+                  <span className="font-medium truncate">{s.idea_title}</span>
+                  <span className="text-zinc-500 shrink-0">{s.day} {s.time}</span>
+                  {s.weather && <span className="shrink-0">{s.weather}</span>}
+                </div>
+              ))}
+              {scheduleAllResult.skipped.map((title, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs text-zinc-500">
+                  <span>—</span>
+                  <span className="truncate">{title}</span>
+                  <span className="shrink-0">no slot found</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {ideas.length === 0 ? (
