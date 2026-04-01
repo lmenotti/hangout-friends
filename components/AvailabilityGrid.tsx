@@ -23,7 +23,7 @@ type GridState = {
 }
 
 function slotBg(count: number, total: number, isUser: boolean): string {
-  const base = 'rounded-sm cursor-pointer transition-colors duration-75'
+  const base = 'rounded-sm transition-colors duration-75'
   // User selected, no one else: bright violet
   if (isUser && count <= 1) return `${base} bg-violet-500`
   // User selected + others: vivid violet-tinted green
@@ -52,6 +52,7 @@ export default function AvailabilityGrid() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const todayJs = new Date().getDay()
@@ -83,9 +84,9 @@ export default function AvailabilityGrid() {
     })
   }
 
-  // Mouse handlers
+  // Mouse handlers (desktop only — only active in editing mode)
   const onMouseDown = (day: number, hour: number) => {
-    if (!user) return
+    if (!user || !editing) return
     const key = `${day}-${hour}`
     const adding = !localSlots.has(key)
     paintingRef.current = adding
@@ -93,28 +94,27 @@ export default function AvailabilityGrid() {
   }
 
   const onMouseEnter = (day: number, hour: number) => {
-    if (paintingRef.current === null || !user) return
+    if (paintingRef.current === null || !user || !editing) return
     paintKey(`${day}-${hour}`, paintingRef.current)
   }
 
   const stopPaint = () => { paintingRef.current = null }
 
-  // Touch handlers — use elementFromPoint to find cell under finger
+  // Touch handlers — only active in editing mode
   const onTouchStart = (e: React.TouchEvent) => {
-    if (!user) return
+    if (!user || !editing) return
     const touch = e.touches[0]
     const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null
     const key = el?.dataset?.cell
     if (!key) return
-    const [d, h] = key.split('-').map(Number)
     const adding = !localSlots.has(key)
     paintingRef.current = adding
     paintKey(key, adding)
   }
 
   const onTouchMove = (e: React.TouchEvent) => {
-    if (paintingRef.current === null || !user) return
-    e.preventDefault() // prevent scroll while painting
+    if (paintingRef.current === null || !user || !editing) return
+    e.preventDefault()
     const touch = e.touches[0]
     const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null
     const key = el?.dataset?.cell
@@ -136,6 +136,7 @@ export default function AvailabilityGrid() {
     await fetchGrid(token)
     setSaving(false)
     setSaved(true)
+    setEditing(false)
     setTimeout(() => setSaved(false), 2000)
   }
 
@@ -147,7 +148,11 @@ export default function AvailabilityGrid() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <p className="text-xs text-zinc-500">
-          {user ? 'Tap or drag to toggle hours.' : 'Enter your name to mark availability.'}
+          {!user
+            ? 'Enter your name to mark availability.'
+            : editing
+            ? 'Tap or drag to toggle hours.'
+            : 'Tap Edit to change your availability.'}
           {grid.totalUsers > 0 && (
             <span className="ml-1 text-zinc-600">
               ({grid.totalUsers} member{grid.totalUsers !== 1 ? 's' : ''})
@@ -155,69 +160,87 @@ export default function AvailabilityGrid() {
           )}
         </p>
         {user && (
-          <button
-            onClick={save}
-            disabled={saving}
-            className="shrink-0 px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 text-white transition-colors touch-manipulation min-h-[40px]"
-          >
-            {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save'}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {editing ? (
+              <>
+                <button
+                  onClick={() => { setLocalSlots(new Set(grid.userSlots)); setEditing(false) }}
+                  className="px-3 py-2 text-sm font-medium rounded-xl bg-zinc-700 hover:bg-zinc-600 active:bg-zinc-800 text-zinc-200 transition-colors touch-manipulation min-h-[40px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={save}
+                  disabled={saving}
+                  className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 text-white transition-colors touch-manipulation min-h-[40px]"
+                >
+                  {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save'}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setEditing(true)}
+                className="px-4 py-2 text-sm font-medium rounded-xl bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-900 text-zinc-200 transition-colors touch-manipulation min-h-[40px]"
+              >
+                Edit
+              </button>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Grid — touch-action none so iOS doesn't scroll while painting */}
+      {/* Grid */}
       <div
         ref={containerRef}
-        className="select-none overflow-x-auto pb-1 -mx-1 px-1"
+        className="select-none"
         onMouseUp={stopPaint}
         onMouseLeave={stopPaint}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={stopPaint}
+        style={{ touchAction: editing ? 'none' : 'auto' }}
       >
-        <div className="min-w-[500px]" style={{ touchAction: user ? 'none' : 'auto' }}>
-          {/* Day headers */}
-          <div className="grid mb-2" style={{ gridTemplateColumns: '36px repeat(7, 1fr)' }}>
-            <div />
-            {DAYS.map((d, i) => {
-              const isToday = DAY_JS[i] === todayJs
+        {/* Day headers */}
+        <div className="grid mb-2" style={{ gridTemplateColumns: '36px repeat(7, 1fr)' }}>
+          <div />
+          {DAYS.map((d, i) => {
+            const isToday = DAY_JS[i] === todayJs
+            return (
+              <div key={d} className="text-center">
+                <span className={`text-[11px] font-medium tracking-wide px-1 py-0.5 rounded-md ${
+                  isToday ? 'bg-indigo-600 text-white' : 'text-zinc-500'
+                }`}>
+                  {d}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Hour rows */}
+        {hours.map(hour => (
+          <div key={hour} className="grid mb-px" style={{ gridTemplateColumns: '36px repeat(7, 1fr)' }}>
+            <div className="text-right pr-2 text-[10px] text-zinc-600 flex items-center justify-end h-10">
+              {hourLabel(hour)}
+            </div>
+            {DAY_JS.map((dayJs) => {
+              const key = `${dayJs}-${hour}`
+              const count = grid.aggregate[key] ?? 0
+              const isUser = localSlots.has(key)
+              const names = grid.namesPerSlot[key] ?? []
               return (
-                <div key={d} className="text-center">
-                  <span className={`text-[11px] font-medium tracking-wide px-1 py-0.5 rounded-md ${
-                    isToday ? 'bg-indigo-600 text-white' : 'text-zinc-500'
-                  }`}>
-                    {d}
-                  </span>
-                </div>
+                <div
+                  key={dayJs}
+                  data-cell={key}
+                  title={names.length > 0 ? names.join(', ') : undefined}
+                  className={`h-10 mx-px ${slotBg(count, grid.totalUsers, isUser)} ${editing ? 'cursor-pointer' : ''}`}
+                  onMouseDown={() => onMouseDown(dayJs, hour)}
+                  onMouseEnter={() => onMouseEnter(dayJs, hour)}
+                />
               )
             })}
           </div>
-
-          {/* Hour rows */}
-          {hours.map(hour => (
-            <div key={hour} className="grid mb-px" style={{ gridTemplateColumns: '36px repeat(7, 1fr)' }}>
-              <div className="text-right pr-2 text-[10px] text-zinc-600 flex items-center justify-end h-10">
-                {hourLabel(hour)}
-              </div>
-              {DAY_JS.map((dayJs) => {
-                const key = `${dayJs}-${hour}`
-                const count = grid.aggregate[key] ?? 0
-                const isUser = localSlots.has(key)
-                const names = grid.namesPerSlot[key] ?? []
-                return (
-                  <div
-                    key={dayJs}
-                    data-cell={key}
-                    title={names.length > 0 ? names.join(', ') : undefined}
-                    className={`h-10 mx-px ${slotBg(count, grid.totalUsers, isUser)}`}
-                    onMouseDown={() => onMouseDown(dayJs, hour)}
-                    onMouseEnter={() => onMouseEnter(dayJs, hour)}
-                  />
-                )
-              })}
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
 
       {/* Legend */}
