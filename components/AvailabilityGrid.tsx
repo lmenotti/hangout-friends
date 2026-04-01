@@ -51,6 +51,7 @@ export default function AvailabilityGrid() {
   })
   const [localSlots, setLocalSlots] = useState<Set<string>>(new Set())
   const paintingRef = useRef<boolean | null>(null)
+  const touchActiveRef = useRef(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -86,9 +87,9 @@ export default function AvailabilityGrid() {
     })
   }
 
-  // Mouse handlers (desktop only — only active in editing mode)
+  // Mouse handlers — desktop only; skipped if a touch event just fired
   const onMouseDown = (day: number, hour: number) => {
-    if (!user || !editing) return
+    if (!user || !editing || touchActiveRef.current) return
     const key = `${day}-${hour}`
     const adding = !localSlots.has(key)
     paintingRef.current = adding
@@ -96,7 +97,7 @@ export default function AvailabilityGrid() {
   }
 
   const onMouseEnter = (day: number, hour: number) => {
-    if (paintingRef.current === null || !user || !editing) return
+    if (paintingRef.current === null || !user || !editing || touchActiveRef.current) return
     paintKey(`${day}-${hour}`, paintingRef.current)
   }
 
@@ -105,7 +106,8 @@ export default function AvailabilityGrid() {
   // Touch handlers — only active in editing mode
   const onTouchStart = (e: React.TouchEvent) => {
     if (!user || !editing) return
-    e.preventDefault() // prevent iOS from synthesizing mousedown after touch, which double-toggles cells
+    e.preventDefault()
+    touchActiveRef.current = true
     const touch = e.touches[0]
     const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null
     const key = el?.dataset?.cell
@@ -200,7 +202,11 @@ export default function AvailabilityGrid() {
         onMouseLeave={stopPaint}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
-        onTouchEnd={stopPaint}
+        onTouchEnd={() => {
+          stopPaint()
+          // Keep blocking synthesized mouse events for 300ms (iOS delay before firing mousedown after touch)
+          setTimeout(() => { touchActiveRef.current = false }, 300)
+        }}
         style={{ touchAction: editing ? 'none' : 'auto' }}
       >
         {/* Day headers */}
