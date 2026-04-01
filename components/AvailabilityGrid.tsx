@@ -69,25 +69,19 @@ function slotBg(
   eventStatus?: 'yes' | 'maybe' | null,
 ): string {
   const base = 'rounded-sm transition-colors duration-75'
-  // Event slots take priority in view mode (not in edit mode)
-  if (!isEditing && eventStatus === 'yes')   return `${base} bg-indigo-500`
-  if (!isEditing && eventStatus === 'maybe') return `${base} bg-indigo-900`
+  // Event slots take priority in view mode (warm red = blocked/busy)
+  if (!isEditing && eventStatus === 'yes')   return `${base} bg-rose-600`
+  if (!isEditing && eventStatus === 'maybe') return `${base} bg-rose-900`
   if (isEditing) {
     return isUser ? `${base} bg-violet-500` : `${base} bg-zinc-800`
   }
-  if (isUser && count <= 1) return `${base} bg-violet-500`
-  if (isUser) {
-    const ratio = total > 0 ? count / total : 0
-    if (ratio >= 0.75) return `${base} bg-violet-400`
-    if (ratio >= 0.5)  return `${base} bg-violet-500`
-    return `${base} bg-violet-600`
-  }
+  // You're free — violet
+  if (isUser) return `${base} bg-violet-500`
+  // Group overlap — 2 levels of sky
   if (count === 0) return `${base} bg-zinc-800`
   const ratio = total > 0 ? count / total : 0
-  if (ratio >= 0.75) return `${base} bg-sky-500`
-  if (ratio >= 0.5)  return `${base} bg-sky-700`
-  if (ratio >= 0.25) return `${base} bg-slate-700`
-  return `${base} bg-zinc-700`
+  if (ratio >= 0.5) return `${base} bg-sky-600`
+  return `${base} bg-sky-900`
 }
 
 function slotBgSoloPerson(personFree: boolean): string {
@@ -114,9 +108,10 @@ export default function AvailabilityGrid() {
 
   const todayJs = new Date().getDay()
 
-  // Lock body scroll when fullscreen edit overlay is open
+  // Lock body scroll when fullscreen edit overlay is open — mobile only
   useEffect(() => {
-    if (editing) {
+    const isMobile = window.matchMedia('(max-width: 767px)').matches
+    if (editing && isMobile) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = ''
@@ -537,12 +532,11 @@ export default function AvailabilityGrid() {
           ) : (
             <>
               <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-zinc-800" />Nobody free</div>
-              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-zinc-700" />Few others</div>
-              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-slate-700" />Some overlap</div>
-              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-sky-500" />Strong overlap</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-sky-900" />Some overlap</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-sky-600" />Most overlap</div>
               <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-violet-500" />You&apos;re free</div>
-              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-indigo-500" />Event (going)</div>
-              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-indigo-900" />Event (maybe)</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-rose-600" />Event (going)</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-rose-900" />Event (maybe)</div>
             </>
           )}
         </div>
