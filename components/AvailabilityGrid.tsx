@@ -48,6 +48,18 @@ function availableNamesForSlot(
   return set
 }
 
+/** Whether `personName` is free in this slot (uses local toggles when they are the signed-in user). */
+function isPersonFreeAt(
+  personName: string,
+  key: string,
+  grid: GridState,
+  localSlots: Set<string>,
+  userName: string | undefined,
+): boolean {
+  if (userName && personName === userName) return localSlots.has(key)
+  return (grid.namesPerSlot[key] ?? []).includes(personName)
+}
+
 function slotBg(count: number, total: number, isUser: boolean, isEditing: boolean): string {
   const base = 'rounded-sm transition-colors duration-75'
   if (isEditing) {
@@ -62,10 +74,15 @@ function slotBg(count: number, total: number, isUser: boolean, isEditing: boolea
   }
   if (count === 0) return `${base} bg-zinc-800`
   const ratio = total > 0 ? count / total : 0
-  if (ratio >= 0.75) return `${base} bg-emerald-500`
-  if (ratio >= 0.5)  return `${base} bg-emerald-700`
-  if (ratio >= 0.25) return `${base} bg-emerald-900`
+  if (ratio >= 0.75) return `${base} bg-sky-500`
+  if (ratio >= 0.5)  return `${base} bg-sky-700`
+  if (ratio >= 0.25) return `${base} bg-slate-700`
   return `${base} bg-zinc-700`
+}
+
+function slotBgSoloPerson(personFree: boolean): string {
+  const base = 'rounded-sm transition-colors duration-75'
+  return personFree ? `${base} bg-amber-500` : `${base} bg-zinc-800`
 }
 
 export default function AvailabilityGrid() {
@@ -82,6 +99,8 @@ export default function AvailabilityGrid() {
   const [editing, setEditing] = useState(false)
   /** Hovered or tapped slot — drives the side roster (replaces flaky native tooltips). */
   const [focusedSlotKey, setFocusedSlotKey] = useState<string | null>(null)
+  /** Grid shows only this person’s free hours (toggle by clicking a name in the roster). */
+  const [filterMember, setFilterMember] = useState<string | null>(null)
 
   const todayJs = new Date().getDay()
 
@@ -126,6 +145,7 @@ export default function AvailabilityGrid() {
   const onMouseDown = (day: number, hour: number) => {
     if (!user || !editing || touchActiveRef.current) return
     setFocusedSlotKey(null)
+    setFilterMember(null)
     const key = `${day}-${hour}`
     const adding = !localSlots.has(key)
     paintingRef.current = adding
@@ -172,6 +192,7 @@ export default function AvailabilityGrid() {
     setLocalSlots(new Set(grid.userSlots))
     setEditing(false)
     setFocusedSlotKey(null)
+    setFilterMember(null)
   }
 
   const save = async () => {
@@ -191,6 +212,7 @@ export default function AvailabilityGrid() {
     setSaved(true)
     setEditing(false)
     setFocusedSlotKey(null)
+    setFilterMember(null)
     setTimeout(() => setSaved(false), 2000)
   }
 
@@ -242,11 +264,19 @@ export default function AvailabilityGrid() {
         const key = `${dayJs}-${hour}`
         const count = grid.aggregate[key] ?? 0
         const isUser = localSlots.has(key)
+        const solo =
+          filterMember !== null &&
+          !editing &&
+          isPersonFreeAt(filterMember, key, grid, localSlots, user?.name)
+        const cellClass =
+          filterMember !== null && !editing
+            ? slotBgSoloPerson(solo)
+            : slotBg(count, grid.totalUsers, isUser, editing)
         return (
           <div
             key={dayJs}
             data-cell={key}
-            className={`mx-px ${flexRows ? '' : 'h-10'} ${slotBg(count, grid.totalUsers, isUser, editing)} ${editing ? 'cursor-pointer' : ''}`}
+            className={`mx-px ${flexRows ? '' : 'h-10'} ${cellClass} ${editing ? 'cursor-pointer' : ''}`}
             onMouseDown={() => onMouseDown(dayJs, hour)}
             onMouseEnter={() => {
               onMouseEnter(dayJs, hour)
@@ -342,7 +372,10 @@ export default function AvailabilityGrid() {
                 </>
               ) : (
                 <button
-                  onClick={() => setEditing(true)}
+                  onClick={() => {
+                    setFilterMember(null)
+                    setEditing(true)
+                  }}
                   className="px-4 py-2 text-sm font-medium rounded-xl bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-900 text-zinc-200 transition-colors touch-manipulation min-h-[40px]"
                 >
                   Edit
@@ -378,6 +411,20 @@ export default function AvailabilityGrid() {
             className="w-full shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/90 p-3 shadow-sm lg:w-[12rem] xl:w-[13rem]"
             aria-live="polite"
           >
+            {filterMember && (
+              <div className="mb-3 flex items-start justify-between gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-1.5">
+                <p className="text-[11px] leading-snug text-amber-100/90">
+                  Grid: only <span className="font-medium text-amber-50">{filterMember}</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setFilterMember(null)}
+                  className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-amber-200/80 hover:bg-amber-500/20 hover:text-amber-50"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
             <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">This slot</p>
             {grid.memberNames.length === 0 ? (
               <p className="mt-2 text-xs text-zinc-500">No members yet.</p>
@@ -386,7 +433,8 @@ export default function AvailabilityGrid() {
                 <p className="mt-1 text-sm font-medium text-zinc-100 tabular-nums">
                   {slotLabel(focusedSlotKey)}
                 </p>
-                <ul className="mt-3 max-h-[min(22rem,55vh)] space-y-2 overflow-y-auto overscroll-contain pr-0.5">
+                <p className="mt-1.5 text-[10px] text-zinc-500">Click a name to show only that person on the grid.</p>
+                <ul className="mt-2 max-h-[min(22rem,55vh)] space-y-1 overflow-y-auto overscroll-contain pr-0.5">
                   {grid.memberNames.map((name, i) => {
                     const free = availableNamesForSlot(
                       focusedSlotKey,
@@ -394,40 +442,93 @@ export default function AvailabilityGrid() {
                       localSlots,
                       user?.name,
                     ).has(name)
+                    const filtered = filterMember === name
                     return (
-                      <li key={`${name}-${i}`} className="flex min-w-0 items-center gap-2.5">
-                        <span
-                          className={`h-2 w-2 shrink-0 rounded-full transition-colors duration-150 ${
-                            free
-                              ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]'
-                              : 'bg-zinc-700'
+                      <li key={`${name}-${i}`}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setFilterMember((prev) => (prev === name ? null : name))
+                          }}
+                          className={`flex min-w-0 w-full items-center gap-2.5 rounded-md px-1 py-1 text-left transition-colors ${
+                            filtered ? 'bg-amber-500/15 ring-1 ring-amber-400/35' : 'hover:bg-zinc-800/80'
                           }`}
-                          aria-hidden
-                        />
-                        <span
-                          className={`truncate text-sm ${free ? 'text-zinc-100' : 'text-zinc-500'}`}
                         >
-                          {name}
-                        </span>
+                          <span
+                            className={`h-2 w-2 shrink-0 rounded-full transition-colors duration-150 ${
+                              free
+                                ? 'bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.35)]'
+                                : 'bg-zinc-600'
+                            }`}
+                            aria-hidden
+                          />
+                          <span
+                            className={`min-w-0 flex-1 truncate text-sm ${free ? 'text-zinc-100' : 'text-zinc-500'} ${
+                              filtered ? 'font-medium text-amber-100/95' : ''
+                            }`}
+                          >
+                            {name}
+                          </span>
+                        </button>
                       </li>
                     )
                   })}
                 </ul>
               </>
             ) : (
-              <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-                Hover a cell to see who is free. On a phone, tap a slot.
-              </p>
+              <>
+                <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+                  Hover or tap a slot, then click a name to solo their schedule on the grid.
+                </p>
+                <ul className="mt-3 max-h-[min(14rem,40vh)] space-y-1 overflow-y-auto overscroll-contain pr-0.5">
+                  {grid.memberNames.map((name, i) => {
+                    const filtered = filterMember === name
+                    return (
+                      <li key={`${name}-${i}`}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setFilterMember((prev) => (prev === name ? null : name))
+                          }}
+                          className={`flex min-w-0 w-full items-center gap-2.5 rounded-md px-1 py-1 text-left text-sm transition-colors ${
+                            filtered
+                              ? 'bg-amber-500/15 font-medium text-amber-100/95 ring-1 ring-amber-400/35'
+                              : 'text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-200'
+                          }`}
+                        >
+                          <span
+                            className={`h-2 w-2 shrink-0 rounded-full ${filtered ? 'bg-amber-400' : 'bg-zinc-600'}`}
+                            aria-hidden
+                          />
+                          <span className="min-w-0 flex-1 truncate">{name}</span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
             )}
           </aside>
         </div>
 
         {/* Legend */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-zinc-600">
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-zinc-800" />Nobody free</div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-emerald-900" />Some others free</div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-emerald-500" />Most others free</div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-violet-500" />You&apos;re free</div>
+          {filterMember && !editing ? (
+            <>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-zinc-800" />Not free</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-amber-500" />{filterMember} free</div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-zinc-800" />Nobody free</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-zinc-700" />Few others</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-slate-700" />Some overlap</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-sky-500" />Strong overlap</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-violet-500" />You&apos;re free</div>
+            </>
+          )}
         </div>
       </div>
 
