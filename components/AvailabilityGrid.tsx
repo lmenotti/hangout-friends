@@ -103,6 +103,7 @@ export default function AvailabilityGrid() {
   // Touch handlers — only active in editing mode
   const onTouchStart = (e: React.TouchEvent) => {
     if (!user || !editing) return
+    e.preventDefault() // prevent iOS from synthesizing mousedown after touch, which double-toggles cells
     const touch = e.touches[0]
     const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null
     const key = el?.dataset?.cell
@@ -245,10 +246,10 @@ export default function AvailabilityGrid() {
 
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-zinc-600">
-        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-zinc-800" />Nobody</div>
-        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-emerald-900" />Some free</div>
-        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-emerald-500" />Most free</div>
-        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-violet-500" />You</div>
+        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-zinc-800" />Nobody free</div>
+        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-emerald-900" />Some others free</div>
+        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-emerald-500" />Most others free</div>
+        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-violet-500" />You&apos;re free</div>
       </div>
     </div>
   )

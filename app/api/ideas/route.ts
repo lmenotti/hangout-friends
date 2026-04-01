@@ -7,17 +7,18 @@ async function getUserFromToken(token: string | null) {
   return data
 }
 
-async function fetchTravelTimes(destination: string): Promise<{ car: number | null; transit: number | null }> {
+async function fetchTravelTimes(destination: string): Promise<{ car: number | null; transit: number | null; walk: number | null }> {
   const key = process.env.GOOGLE_MAPS_API_KEY
-  if (!key || !destination.trim()) return { car: null, transit: null }
+  if (!key || !destination.trim()) return { car: null, transit: null, walk: null }
 
   const origin = encodeURIComponent('Berkeley, CA')
   const dest = encodeURIComponent(destination)
   const base = 'https://maps.googleapis.com/maps/api/distancematrix/json'
 
-  const [carRes, transitRes] = await Promise.allSettled([
+  const [carRes, transitRes, walkRes] = await Promise.allSettled([
     fetch(`${base}?origins=${origin}&destinations=${dest}&mode=driving&key=${key}`),
     fetch(`${base}?origins=${origin}&destinations=${dest}&mode=transit&key=${key}`),
+    fetch(`${base}?origins=${origin}&destinations=${dest}&mode=walking&key=${key}`),
   ])
 
   const parse = async (res: PromiseSettledResult<Response>): Promise<number | null> => {
@@ -31,8 +32,9 @@ async function fetchTravelTimes(destination: string): Promise<{ car: number | nu
     }
   }
 
-  const [car, transit] = await Promise.all([parse(carRes), parse(transitRes)])
-  return { car, transit }
+  const [car, transit, walkRaw] = await Promise.all([parse(carRes), parse(transitRes), parse(walkRes)])
+  const walk = walkRaw !== null && walkRaw <= 25 ? walkRaw : null
+  return { car, transit, walk }
 }
 
 export async function GET(req: NextRequest) {
@@ -41,7 +43,7 @@ export async function GET(req: NextRequest) {
 
   const { data: ideas, error } = await supabase
     .from('ideas')
-    .select('id, title, description, created_by, created_at, duration_minutes, is_outdoor, location, travel_car_minutes, travel_transit_minutes')
+    .select('id, title, description, created_by, created_at, duration_minutes, is_outdoor, location, travel_car_minutes, travel_transit_minutes, travel_walk_minutes')
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -71,6 +73,7 @@ export async function GET(req: NextRequest) {
       location: idea.location ?? null,
       travel_car_minutes: idea.travel_car_minutes ?? null,
       travel_transit_minutes: idea.travel_transit_minutes ?? null,
+      travel_walk_minutes: idea.travel_walk_minutes ?? null,
       creator_name: creatorMap[idea.created_by] ?? 'Unknown',
       vote_count: ideaVotes.length,
       user_voted: user ? ideaVotes.some((v: any) => v.user_id === user.id) : false,
@@ -89,7 +92,7 @@ export async function POST(req: NextRequest) {
   const { title, description, duration_minutes, is_outdoor, location } = await req.json()
   if (!title?.trim()) return NextResponse.json({ error: 'Title required' }, { status: 400 })
 
-  const travel = location?.trim() ? await fetchTravelTimes(location.trim()) : { car: null, transit: null }
+  const travel = location?.trim() ? await fetchTravelTimes(location.trim()) : { car: null, transit: null, walk: null }
 
   const { data, error } = await supabase
     .from('ideas')
@@ -102,6 +105,7 @@ export async function POST(req: NextRequest) {
       location: location?.trim() || null,
       travel_car_minutes: travel.car,
       travel_transit_minutes: travel.transit,
+      travel_walk_minutes: travel.walk,
     })
     .select()
     .single()

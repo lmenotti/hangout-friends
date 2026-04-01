@@ -53,6 +53,7 @@ export type Database = {
           location: string | null
           travel_car_minutes: number | null
           travel_transit_minutes: number | null
+          travel_walk_minutes: number | null
         }
         Insert: {
           id?: string
@@ -65,6 +66,7 @@ export type Database = {
           location?: string | null
           travel_car_minutes?: number | null
           travel_transit_minutes?: number | null
+          travel_walk_minutes?: number | null
         }
         Update: {
           id?: string
@@ -77,6 +79,7 @@ export type Database = {
           location?: string | null
           travel_car_minutes?: number | null
           travel_transit_minutes?: number | null
+          travel_walk_minutes?: number | null
         }
       }
       idea_votes: {
@@ -162,6 +165,7 @@ export type IdeaWithVotes = Idea & {
   location: string | null
   travel_car_minutes: number | null
   travel_transit_minutes: number | null
+  travel_walk_minutes: number | null
 }
 
 export type EventWithRSVPs = Event & {

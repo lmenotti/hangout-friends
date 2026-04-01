@@ -26,8 +26,9 @@ function IdeaCard({ idea, token, onVote, onSchedule, scheduling }: {
   onSchedule?: (idea: IdeaWithVotes) => void
   scheduling?: boolean
 }) {
-  const carTime = formatTravel(idea.travel_car_minutes)
   const transitTime = formatTravel(idea.travel_transit_minutes)
+  const carTime = formatTravel(idea.travel_car_minutes)
+  const walkTime = formatTravel(idea.travel_walk_minutes)
   const canSchedule = idea.vote_count >= 2
 
   return (
@@ -85,11 +86,12 @@ function IdeaCard({ idea, token, onVote, onSchedule, scheduling }: {
         </div>
 
         {/* Travel time from Berkeley */}
-        {(carTime || transitTime) && (
+        {(transitTime || carTime || walkTime) && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
             <span className="text-xs text-zinc-600">From Berkeley:</span>
-            {carTime && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚗</span><span>{carTime}</span></span>}
+            {walkTime && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚶</span><span>{walkTime}</span></span>}
             {transitTime && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚌</span><span>{transitTime}</span></span>}
+            {carTime && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚗</span><span>{carTime}</span></span>}
           </div>
         )}
 
@@ -146,7 +148,7 @@ export default function IdeasBoard({ showSchedule = false }: { showSchedule?: bo
 
   const handleVote = async (id: string) => {
     if (!token) return
-    // Optimistic update
+    // Optimistic update — no re-fetch to avoid re-sorting the list mid-session
     setIdeas(prev => prev.map(idea => {
       if (idea.id !== id) return idea
       const nowVoted = !idea.user_voted
@@ -154,10 +156,12 @@ export default function IdeasBoard({ showSchedule = false }: { showSchedule?: bo
         ...idea,
         user_voted: nowVoted,
         vote_count: nowVoted ? idea.vote_count + 1 : idea.vote_count - 1,
+        voter_names: nowVoted
+          ? [...idea.voter_names, 'You']
+          : idea.voter_names.filter(n => n !== 'You'),
       }
     }))
-    await fetch(`/api/ideas/${id}/vote`, { method: 'POST', headers: { 'x-user-token': token } })
-    fetchIdeas()
+    fetch(`/api/ideas/${id}/vote`, { method: 'POST', headers: { 'x-user-token': token } })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
