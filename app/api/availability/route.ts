@@ -15,8 +15,11 @@ export async function GET(req: NextRequest) {
     .from('availability')
     .select('day_of_week, hour, user_id, users(name)')
 
-  const { data: allUsers } = await supabase.from('users').select('id')
+  const { data: allUsers } = await supabase.from('users').select('id, name').order('name')
   const totalUsers = allUsers?.length ?? 0
+  const memberNames = (allUsers ?? [])
+    .map((u) => u.name)
+    .filter((n): n is string => Boolean(n))
 
   const aggregate: Record<string, number> = {}
   const namesPerSlot: Record<string, string[]> = {}
@@ -64,6 +67,7 @@ export async function GET(req: NextRequest) {
     namesPerSlot,
     userSlots: Array.from(userSlots),
     totalUsers,
+    memberNames,
     eventSlots,
   })
 }

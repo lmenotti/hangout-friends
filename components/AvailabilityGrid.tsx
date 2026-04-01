@@ -15,11 +15,37 @@ function hourLabel(h: number) {
   return `${h - 12}pm`
 }
 
+function slotLabel(key: string) {
+  const parts = key.split('-')
+  const d = parseInt(parts[0] ?? '0', 10)
+  const h = parseInt(parts[1] ?? '0', 10)
+  const day = DAYS[d] ?? '—'
+  return `${day} · ${hourLabel(h)}`
+}
+
 type GridState = {
   aggregate: Record<string, number>
   namesPerSlot: Record<string, string[]>
   userSlots: Set<string>
   totalUsers: number
+  memberNames: string[]
+}
+
+/** Who is marked free for this slot, including unsaved local edits for the current user. */
+function availableNamesForSlot(
+  key: string,
+  grid: GridState,
+  localSlots: Set<string>,
+  userName: string | undefined,
+): Set<string> {
+  const set = new Set(grid.namesPerSlot[key] ?? [])
+  if (userName) {
+    const saved = grid.userSlots.has(key)
+    const local = localSlots.has(key)
+    if (local && !saved) set.add(userName)
+    if (!local && saved) set.delete(userName)
+  }
+  return set
 }
 
 function slotBg(count: number, total: number, isUser: boolean, isEditing: boolean): string {
@@ -45,7 +71,7 @@ function slotBg(count: number, total: number, isUser: boolean, isEditing: boolea
 export default function AvailabilityGrid() {
   const { user, token } = useUser()
   const [grid, setGrid] = useState<GridState>({
-    aggregate: {}, namesPerSlot: {}, userSlots: new Set(), totalUsers: 0,
+    aggregate: {}, namesPerSlot: {}, userSlots: new Set(), totalUsers: 0, memberNames: [],
   })
   const [localSlots, setLocalSlots] = useState<Set<string>>(new Set())
   const paintingRef = useRef<boolean | null>(null)
@@ -54,6 +80,8 @@ export default function AvailabilityGrid() {
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
+  /** Hovered or tapped slot — drives the side roster (replaces flaky native tooltips). */
+  const [focusedSlotKey, setFocusedSlotKey] = useState<string | null>(null)
 
   const todayJs = new Date().getDay()
 
@@ -76,6 +104,7 @@ export default function AvailabilityGrid() {
           namesPerSlot: data.namesPerSlot ?? {},
           userSlots: new Set(data.userSlots),
           totalUsers: data.totalUsers,
+          memberNames: data.memberNames ?? [],
         })
         setLocalSlots(new Set(data.userSlots))
       })
@@ -96,6 +125,7 @@ export default function AvailabilityGrid() {
 
   const onMouseDown = (day: number, hour: number) => {
     if (!user || !editing || touchActiveRef.current) return
+    setFocusedSlotKey(null)
     const key = `${day}-${hour}`
     const adding = !localSlots.has(key)
     paintingRef.current = adding
@@ -107,7 +137,9 @@ export default function AvailabilityGrid() {
     paintKey(`${day}-${hour}`, paintingRef.current)
   }
 
-  const stopPaint = () => { paintingRef.current = null }
+  const stopPaint = () => {
+    paintingRef.current = null
+  }
 
   const onTouchStart = (e: React.TouchEvent) => {
     if (!user || !editing) return
@@ -139,6 +171,7 @@ export default function AvailabilityGrid() {
   const cancel = () => {
     setLocalSlots(new Set(grid.userSlots))
     setEditing(false)
+    setFocusedSlotKey(null)
   }
 
   const save = async () => {
@@ -157,6 +190,7 @@ export default function AvailabilityGrid() {
     setSaving(false)
     setSaved(true)
     setEditing(false)
+    setFocusedSlotKey(null)
     setTimeout(() => setSaved(false), 2000)
   }
 
@@ -164,9 +198,14 @@ export default function AvailabilityGrid() {
 
   if (loading) return <div className="h-80 rounded-xl bg-zinc-800/50 animate-pulse" />
 
+  const clearFocusedSlot = () => setFocusedSlotKey(null)
+
   const gridProps = {
     onMouseUp: stopPaint,
-    onMouseLeave: stopPaint,
+    onMouseLeave: () => {
+      stopPaint()
+      clearFocusedSlot()
+    },
     onTouchStart,
     onTouchMove,
     onTouchEnd,
@@ -203,15 +242,19 @@ export default function AvailabilityGrid() {
         const key = `${dayJs}-${hour}`
         const count = grid.aggregate[key] ?? 0
         const isUser = localSlots.has(key)
-        const names = grid.namesPerSlot[key] ?? []
         return (
           <div
             key={dayJs}
             data-cell={key}
-            title={names.length > 0 ? names.join(', ') : undefined}
             className={`mx-px ${flexRows ? '' : 'h-10'} ${slotBg(count, grid.totalUsers, isUser, editing)} ${editing ? 'cursor-pointer' : ''}`}
             onMouseDown={() => onMouseDown(dayJs, hour)}
-            onMouseEnter={() => onMouseEnter(dayJs, hour)}
+            onMouseEnter={() => {
+              onMouseEnter(dayJs, hour)
+              if (paintingRef.current === null) setFocusedSlotKey(key)
+            }}
+            onClick={() => {
+              if (!editing) setFocusedSlotKey(key)
+            }}
           />
         )
       })}
@@ -309,21 +352,74 @@ export default function AvailabilityGrid() {
           )}
         </div>
 
-        {/* Desktop grid (also shows on mobile in view mode) */}
+        {/* Grid + side roster — wrapper keeps focus when moving pointer from grid to list */}
         <div
-          className="select-none"
-          style={{ touchAction: editing ? 'none' : 'auto' }}
-          {...(editing ? {} : {})}
+          className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-5"
           onMouseUp={stopPaint}
-          onMouseLeave={stopPaint}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
+          onMouseLeave={() => {
+            stopPaint()
+            clearFocusedSlot()
+          }}
         >
-          {dayHeaders}
-          <div className="mt-px">
-            {hourCells(false)}
+          <div
+            className="min-w-0 flex-1 select-none"
+            style={{ touchAction: editing ? 'none' : 'auto' }}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
+            {dayHeaders}
+            <div className="mt-px">
+              {hourCells(false)}
+            </div>
           </div>
+
+          <aside
+            className="w-full shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/90 p-3 shadow-sm lg:w-[12rem] xl:w-[13rem]"
+            aria-live="polite"
+          >
+            <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">This slot</p>
+            {grid.memberNames.length === 0 ? (
+              <p className="mt-2 text-xs text-zinc-500">No members yet.</p>
+            ) : focusedSlotKey ? (
+              <>
+                <p className="mt-1 text-sm font-medium text-zinc-100 tabular-nums">
+                  {slotLabel(focusedSlotKey)}
+                </p>
+                <ul className="mt-3 max-h-[min(22rem,55vh)] space-y-2 overflow-y-auto overscroll-contain pr-0.5">
+                  {grid.memberNames.map((name, i) => {
+                    const free = availableNamesForSlot(
+                      focusedSlotKey,
+                      grid,
+                      localSlots,
+                      user?.name,
+                    ).has(name)
+                    return (
+                      <li key={`${name}-${i}`} className="flex min-w-0 items-center gap-2.5">
+                        <span
+                          className={`h-2 w-2 shrink-0 rounded-full transition-colors duration-150 ${
+                            free
+                              ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]'
+                              : 'bg-zinc-700'
+                          }`}
+                          aria-hidden
+                        />
+                        <span
+                          className={`truncate text-sm ${free ? 'text-zinc-100' : 'text-zinc-500'}`}
+                        >
+                          {name}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
+            ) : (
+              <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+                Hover a cell to see who is free. On a phone, tap a slot.
+              </p>
+            )}
+          </aside>
         </div>
 
         {/* Legend */}
@@ -334,6 +430,7 @@ export default function AvailabilityGrid() {
           <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-violet-500" />You&apos;re free</div>
         </div>
       </div>
+
     </>
   )
 }
