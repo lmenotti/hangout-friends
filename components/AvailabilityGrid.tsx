@@ -196,7 +196,7 @@ export default function AvailabilityGrid() {
       className={`grid ${flexRows ? 'flex-1 min-h-0' : 'mb-px'}`}
       style={{ gridTemplateColumns: '36px repeat(7, 1fr)' }}
     >
-      <div className={`text-right pr-2 text-[10px] text-zinc-600 flex items-center justify-end ${flexRows ? '' : 'h-10'}`}>
+      <div className={`text-right pr-2 text-[10px] text-zinc-600 flex items-start justify-end pt-0.5 ${flexRows ? '' : 'h-10'}`}>
         {hourLabel(hour)}
       </div>
       {DAY_JS.map((dayJs) => {
@@ -258,7 +258,7 @@ export default function AvailabilityGrid() {
           </div>
 
           {/* Grid — fills remaining height, no scroll */}
-          <div className="flex-1 min-h-0 flex flex-col px-2 pb-2">
+          <div className="flex-1 min-h-0 flex flex-col px-2 pb-2 divide-y divide-zinc-800">
             {hourCells(true)}
           </div>
         </div>

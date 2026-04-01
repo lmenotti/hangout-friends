@@ -21,7 +21,7 @@ function Dashboard() {
             All events →
           </Link>
         </div>
-        <EventsList />
+        <EventsList upcomingOnly />
       </section>
 
       <section>

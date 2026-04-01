@@ -111,10 +111,11 @@ function EventCard({ event, token, onRsvp }: {
   )
 }
 
-export default function EventsList() {
+export default function EventsList({ upcomingOnly = false }: { upcomingOnly?: boolean }) {
   const { token } = useUser()
   const [events, setEvents] = useState<EventWithRSVPs[]>([])
   const [loading, setLoading] = useState(true)
+  const [showPast, setShowPast] = useState(false)
 
   const fetchEvents = () => {
     fetch('/api/events', { headers: token ? { 'x-user-token': token } : {} })
@@ -137,19 +138,19 @@ export default function EventsList() {
 
   if (loading) return <div className="h-40 rounded-xl bg-zinc-800/50 animate-pulse" />
 
-  if (events.length === 0) {
-    return (
-      <div className="text-center py-16 text-zinc-600">
-        <p className="text-2xl mb-2">📅</p>
-        <p className="text-sm">No events yet.</p>
-        <p className="text-xs mt-1 text-zinc-700">Use the form above or auto-schedule from the Ideas tab.</p>
-      </div>
-    )
-  }
-
   const now = new Date()
   const upcoming = events.filter(e => !e.scheduled_at || new Date(e.scheduled_at) >= now)
   const past = events.filter(e => e.scheduled_at && new Date(e.scheduled_at) < now)
+
+  if (events.length === 0 || (upcomingOnly && upcoming.length === 0)) {
+    return (
+      <div className="text-center py-10 text-zinc-600">
+        <p className="text-2xl mb-2">📅</p>
+        <p className="text-sm">No upcoming events.</p>
+        <p className="text-xs mt-1 text-zinc-700">Auto-schedule from the Ideas tab or create one manually.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -158,12 +159,20 @@ export default function EventsList() {
           {upcoming.map(e => <EventCard key={e.id} event={e} token={token} onRsvp={handleRsvp} />)}
         </div>
       )}
-      {past.length > 0 && (
+      {!upcomingOnly && past.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-zinc-600 uppercase tracking-widest mb-3">Past</p>
-          <div className="space-y-3">
-            {past.map(e => <EventCard key={e.id} event={e} token={token} onRsvp={handleRsvp} />)}
-          </div>
+          <button
+            onClick={() => setShowPast(v => !v)}
+            className="flex items-center gap-2 text-xs font-medium text-zinc-600 hover:text-zinc-400 uppercase tracking-widest transition-colors mb-3 touch-manipulation"
+          >
+            <span>{showPast ? '▾' : '▸'}</span>
+            <span>Past ({past.length})</span>
+          </button>
+          {showPast && (
+            <div className="space-y-3">
+              {past.map(e => <EventCard key={e.id} event={e} token={token} onRsvp={handleRsvp} />)}
+            </div>
+          )}
         </div>
       )}
     </div>
