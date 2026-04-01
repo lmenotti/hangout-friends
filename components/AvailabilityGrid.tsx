@@ -258,7 +258,7 @@ export default function AvailabilityGrid() {
           </div>
 
           {/* Grid — fills remaining height, no scroll */}
-          <div className="flex-1 min-h-0 flex flex-col px-2 pb-2 divide-y divide-zinc-800">
+          <div className="flex-1 min-h-0 flex flex-col px-2 pb-2 divide-y divide-black">
             {hourCells(true)}
           </div>
         </div>
