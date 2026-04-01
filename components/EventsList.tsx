@@ -3,6 +3,17 @@
 import { useEffect, useState } from 'react'
 import { useUser } from '@/context/UserContext'
 import type { EventWithRSVPs } from '@/types/database'
+import PlacesInput from '@/components/PlacesInput'
+
+type TravelTimes = { car: number | null; transit: number | null; walk: number | null }
+
+function formatTravel(minutes: number | null) {
+  if (!minutes) return null
+  if (minutes < 60) return `${minutes}m`
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m === 0 ? `${h}h` : `${h}h ${m}m`
+}
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
@@ -46,15 +57,16 @@ function RSVPNames({ names, label, color }: { names: string[]; label: string; co
   )
 }
 
-function EventCard({ event, token, onRsvp, onDelete, onUpdate }: {
+function EventCard({ event, token, viewerTravel, onRsvp, onDelete, onUpdate }: {
   event: EventWithRSVPs
   token: string | null
+  viewerTravel: TravelTimes | null
   onRsvp: (id: string, status: string) => void
   onDelete: (id: string) => void
   onUpdate: (event: EventWithRSVPs) => void
 }) {
   const { user } = useUser()
-  const isOwner = !!user && user.id === event.created_by
+  const isOwner = !!user && (event.created_by === null || user.id === event.created_by)
   const isPast = event.scheduled_at && new Date(event.scheduled_at) < new Date()
   const hasRsvps = event.rsvp_yes > 0 || event.rsvp_maybe > 0 || event.rsvp_no > 0
 
@@ -65,6 +77,7 @@ function EventCard({ event, token, onRsvp, onDelete, onUpdate }: {
   const [editEnd, setEditEnd] = useState(event.end_time ? toDatetimeLocal(event.end_time) : '')
   const [editLocation, setEditLocation] = useState(event.location ?? '')
   const [saving, setSaving] = useState(false)
+  const [editError, setEditError] = useState('')
 
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -81,6 +94,7 @@ function EventCard({ event, token, onRsvp, onDelete, onUpdate }: {
   const saveEdit = async () => {
     if (!token || !editTitle.trim()) return
     setSaving(true)
+    setEditError('')
     const res = await fetch(`/api/events/${event.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'x-user-token': token },
@@ -96,6 +110,9 @@ function EventCard({ event, token, onRsvp, onDelete, onUpdate }: {
       const updated = await res.json()
       onUpdate({ ...event, ...updated })
       setEditing(false)
+    } else {
+      const data = await res.json().catch(() => ({}))
+      setEditError(data.error ?? 'Failed to save.')
     }
     setSaving(false)
   }
@@ -127,9 +144,9 @@ function EventCard({ event, token, onRsvp, onDelete, onUpdate }: {
           placeholder="Description (optional)"
           className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         />
-        <input
+        <PlacesInput
           value={editLocation}
-          onChange={e => setEditLocation(e.target.value)}
+          onChange={setEditLocation}
           placeholder="Location (optional)"
           className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         />
@@ -151,6 +168,7 @@ function EventCard({ event, token, onRsvp, onDelete, onUpdate }: {
             className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
+        {editError && <p className="text-xs text-red-400">{editError}</p>}
         <div className="flex gap-2 pt-1">
           <button
             onClick={() => setEditing(false)}
@@ -235,6 +253,21 @@ function EventCard({ event, token, onRsvp, onDelete, onUpdate }: {
         )}
 
         {event.location && <LocationLink location={event.location} />}
+
+        {viewerTravel && event.location && (() => {
+          const car = formatTravel(viewerTravel.car)
+          const transit = formatTravel(viewerTravel.transit)
+          const walk = formatTravel(viewerTravel.walk)
+          if (!car && !transit && !walk) return null
+          return (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+              <span className="text-xs text-zinc-600">Your commute:</span>
+              {walk && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚶</span><span>{walk}</span></span>}
+              {transit && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚌</span><span>{transit}</span></span>}
+              {car && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚗</span><span>{car}</span></span>}
+            </div>
+          )
+        })()}
       </div>
 
       {hasRsvps && (
@@ -271,15 +304,35 @@ function EventCard({ event, token, onRsvp, onDelete, onUpdate }: {
 }
 
 export default function EventsList({ upcomingOnly = false }: { upcomingOnly?: boolean }) {
-  const { token } = useUser()
+  const { token, user } = useUser()
   const [events, setEvents] = useState<EventWithRSVPs[]>([])
   const [loading, setLoading] = useState(true)
   const [showPast, setShowPast] = useState(false)
+  const [viewerTravelMap, setViewerTravelMap] = useState<Record<string, TravelTimes>>({})
+
+  const fetchViewerTravel = async (loadedEvents: EventWithRSVPs[], origin: string) => {
+    const withLoc = loadedEvents.filter(e => e.location)
+    if (!withLoc.length) return
+    const res = await fetch('/api/travel-time', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ origin, destinations: withLoc.map(e => e.location!) }),
+    })
+    if (!res.ok) return
+    const times: TravelTimes[] = await res.json()
+    const map: Record<string, TravelTimes> = {}
+    withLoc.forEach((e, i) => { map[e.id] = times[i] })
+    setViewerTravelMap(map)
+  }
 
   const fetchEvents = () => {
     fetch('/api/events', { headers: token ? { 'x-user-token': token } : {} })
       .then(r => r.json())
-      .then(data => setEvents(Array.isArray(data) ? data : []))
+      .then(data => {
+        const loaded = Array.isArray(data) ? data : []
+        setEvents(loaded)
+        if (user?.home_location) fetchViewerTravel(loaded, user.home_location)
+      })
       .finally(() => setLoading(false))
   }
 
@@ -314,6 +367,7 @@ export default function EventsList({ upcomingOnly = false }: { upcomingOnly?: bo
   const cardProps = (e: EventWithRSVPs) => ({
     event: e,
     token,
+    viewerTravel: viewerTravelMap[e.id] ?? null,
     onRsvp: handleRsvp,
     onDelete: (id: string) => setEvents(prev => prev.filter(ev => ev.id !== id)),
     onUpdate: (updated: EventWithRSVPs) => setEvents(prev => prev.map(ev => ev.id === updated.id ? { ...ev, ...updated } : ev)),

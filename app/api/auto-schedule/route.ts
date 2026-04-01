@@ -108,12 +108,20 @@ export async function findBestSlot(params: {
     c.weatherScore = weatherMap.size > 0 ? lookupWeatherScore(weatherMap, c.scheduledDate) : 5
   }
 
+  // For outdoor events with weather data: prefer slots with acceptable weather (score >= 3).
+  // Only fall back to bad-weather slots if no good ones exist.
+  let pool = candidates
+  if (weatherMap.size > 0 && idea.is_outdoor) {
+    const goodWeather = candidates.filter(c => c.weatherScore >= 3)
+    if (goodWeather.length > 0) pool = goodWeather
+  }
+
   // Sort: voter count dominates (×20), weather breaks ties (0–10)
-  candidates.sort((a, b) =>
+  pool.sort((a, b) =>
     (b.voterCount * 20 + b.weatherScore) - (a.voterCount * 20 + a.weatherScore)
   )
 
-  return candidates[0]
+  return pool[0]
 }
 
 export async function POST(req: NextRequest) {

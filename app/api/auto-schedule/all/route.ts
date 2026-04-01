@@ -137,6 +137,7 @@ export async function POST(req: NextRequest) {
       scheduled_at: best.scheduledDate.toISOString(),
       end_time,
       location: idea.location ?? null,
+      created_by: user.id,
     })
 
     if (error) {

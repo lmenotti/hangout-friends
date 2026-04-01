@@ -73,6 +73,7 @@ function IdeaCard({ idea, token, viewerTravel, viewerOrigin, onVote, onScheduled
   const [editOutdoor, setEditOutdoor] = useState(idea.is_outdoor ?? false)
   const [editSuggested, setEditSuggested] = useState(idea.suggested_at ? toDatetimeLocal(idea.suggested_at) : '')
   const [saving, setSaving] = useState(false)
+  const [editError, setEditError] = useState('')
 
   // Delete state
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -99,6 +100,7 @@ function IdeaCard({ idea, token, viewerTravel, viewerOrigin, onVote, onScheduled
   const saveEdit = async () => {
     if (!token || !editTitle.trim() || !editDuration) return
     setSaving(true)
+    setEditError('')
     const res = await fetch(`/api/ideas/${idea.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'x-user-token': token },
@@ -115,6 +117,9 @@ function IdeaCard({ idea, token, viewerTravel, viewerOrigin, onVote, onScheduled
       const updated = await res.json()
       onUpdate({ ...idea, ...updated })
       setEditing(false)
+    } else {
+      const data = await res.json().catch(() => ({}))
+      setEditError(data.error ?? 'Failed to save.')
     }
     setSaving(false)
   }
@@ -234,6 +239,7 @@ function IdeaCard({ idea, token, viewerTravel, viewerOrigin, onVote, onScheduled
             className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
+        {editError && <p className="text-xs text-red-400">{editError}</p>}
         <div className="flex gap-2 pt-1">
           <button
             onClick={() => setEditing(false)}

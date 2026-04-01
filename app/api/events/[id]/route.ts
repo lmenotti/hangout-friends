@@ -15,7 +15,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { data: existing } = await supabase.from('events').select('created_by').eq('id', id).single()
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (existing.created_by !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (existing.created_by !== null && existing.created_by !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { title, description, scheduled_at, end_time, location } = await req.json()
 
@@ -44,7 +44,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   const { data: existing } = await supabase.from('events').select('created_by').eq('id', id).single()
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (existing.created_by !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (existing.created_by !== null && existing.created_by !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   await supabase.from('rsvps').delete().eq('event_id', id)
   const { error } = await supabase.from('events').delete().eq('id', id)
