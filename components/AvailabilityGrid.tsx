@@ -22,18 +22,20 @@ type GridState = {
   totalUsers: number
 }
 
-function slotBg(count: number, total: number, isUser: boolean): string {
+function slotBg(count: number, total: number, isUser: boolean, isEditing: boolean): string {
   const base = 'rounded-sm transition-colors duration-75'
-  // User selected, no one else: bright violet
+  // In edit mode: only show purple (you) or dark (not you) — no green overlay
+  if (isEditing) {
+    return isUser ? `${base} bg-violet-500` : `${base} bg-zinc-800`
+  }
+  // View mode: full colour scale
   if (isUser && count <= 1) return `${base} bg-violet-500`
-  // User selected + others: vivid violet-tinted green
   if (isUser) {
     const ratio = total > 0 ? count / total : 0
     if (ratio >= 0.75) return `${base} bg-violet-400`
     if (ratio >= 0.5)  return `${base} bg-violet-500`
     return `${base} bg-violet-600`
   }
-  // Others only (not you)
   if (count === 0) return `${base} bg-zinc-800`
   const ratio = total > 0 ? count / total : 0
   if (ratio >= 0.75) return `${base} bg-emerald-500`
@@ -234,7 +236,7 @@ export default function AvailabilityGrid() {
                   key={dayJs}
                   data-cell={key}
                   title={names.length > 0 ? names.join(', ') : undefined}
-                  className={`h-10 mx-px ${slotBg(count, grid.totalUsers, isUser)} ${editing ? 'cursor-pointer' : ''}`}
+                  className={`h-10 mx-px ${slotBg(count, grid.totalUsers, isUser, editing)} ${editing ? 'cursor-pointer' : ''}`}
                   onMouseDown={() => onMouseDown(dayJs, hour)}
                   onMouseEnter={() => onMouseEnter(dayJs, hour)}
                 />
