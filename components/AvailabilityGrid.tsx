@@ -168,17 +168,16 @@ export default function AvailabilityGrid() {
       {/* Grid — touch-action none so iOS doesn't scroll while painting */}
       <div
         ref={containerRef}
-        className="select-none overflow-x-auto pb-1"
-        style={{ WebkitOverflowScrolling: 'touch' }}
+        className="select-none overflow-x-auto pb-1 -mx-1 px-1"
         onMouseUp={stopPaint}
         onMouseLeave={stopPaint}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={stopPaint}
       >
-        <div className="min-w-[440px]" style={{ touchAction: user ? 'pan-x' : 'auto' }}>
+        <div className="min-w-[500px]" style={{ touchAction: user ? 'none' : 'auto' }}>
           {/* Day headers */}
-          <div className="grid mb-2" style={{ gridTemplateColumns: '32px repeat(7, 1fr)' }}>
+          <div className="grid mb-2" style={{ gridTemplateColumns: '36px repeat(7, 1fr)' }}>
             <div />
             {DAYS.map((d, i) => {
               const isToday = DAY_JS[i] === todayJs
@@ -196,8 +195,8 @@ export default function AvailabilityGrid() {
 
           {/* Hour rows */}
           {hours.map(hour => (
-            <div key={hour} className="grid mb-px" style={{ gridTemplateColumns: '32px repeat(7, 1fr)' }}>
-              <div className="text-right pr-1.5 text-[10px] text-zinc-600 flex items-center justify-end h-7">
+            <div key={hour} className="grid mb-px" style={{ gridTemplateColumns: '36px repeat(7, 1fr)' }}>
+              <div className="text-right pr-2 text-[10px] text-zinc-600 flex items-center justify-end h-10">
                 {hourLabel(hour)}
               </div>
               {DAY_JS.map((dayJs) => {
@@ -210,7 +209,7 @@ export default function AvailabilityGrid() {
                     key={dayJs}
                     data-cell={key}
                     title={names.length > 0 ? names.join(', ') : undefined}
-                    className={`h-7 mx-px ${slotBg(count, grid.totalUsers, isUser)}`}
+                    className={`h-10 mx-px ${slotBg(count, grid.totalUsers, isUser)}`}
                     onMouseDown={() => onMouseDown(dayJs, hour)}
                     onMouseEnter={() => onMouseEnter(dayJs, hour)}
                   />

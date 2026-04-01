@@ -22,8 +22,8 @@ export default function Nav() {
           <Link href="/" className="font-semibold text-white text-sm tracking-tight shrink-0 touch-manipulation">
             hangout
           </Link>
-          {/* Scrollable on very small screens */}
-          <div className="flex gap-0.5 overflow-x-auto no-scrollbar">
+          {/* Desktop nav links — hidden on mobile (bottom nav takes over) */}
+          <div className="hidden md:flex gap-0.5">
             {links.map(link => (
               <Link
                 key={link.href}
@@ -46,7 +46,7 @@ export default function Nav() {
             </span>
             <button
               onClick={clearUser}
-              className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors px-2 py-2 rounded-lg hover:bg-zinc-800 touch-manipulation min-h-[36px]"
+              className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors px-2 py-2 rounded-lg hover:bg-zinc-800 touch-manipulation min-h-[44px]"
             >
               Switch
             </button>
