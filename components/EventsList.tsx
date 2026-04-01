@@ -14,6 +14,12 @@ function formatDate(iso: string) {
   })
 }
 
+function toDatetimeLocal(iso: string) {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 function LocationLink({ location }: { location: string }) {
   const isUrl = /^https?:\/\//i.test(location)
   const href = isUrl ? location : `https://maps.google.com/?q=${encodeURIComponent(location)}`
@@ -40,43 +46,197 @@ function RSVPNames({ names, label, color }: { names: string[]; label: string; co
   )
 }
 
-function EventCard({ event, token, onRsvp }: {
+function EventCard({ event, token, onRsvp, onDelete, onUpdate }: {
   event: EventWithRSVPs
   token: string | null
   onRsvp: (id: string, status: string) => void
+  onDelete: (id: string) => void
+  onUpdate: (event: EventWithRSVPs) => void
 }) {
+  const { user } = useUser()
+  const isOwner = !!user && user.id === event.created_by
   const isPast = event.scheduled_at && new Date(event.scheduled_at) < new Date()
   const hasRsvps = event.rsvp_yes > 0 || event.rsvp_maybe > 0 || event.rsvp_no > 0
+
+  const [editing, setEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(event.title)
+  const [editDesc, setEditDesc] = useState(event.description ?? '')
+  const [editScheduled, setEditScheduled] = useState(event.scheduled_at ? toDatetimeLocal(event.scheduled_at) : '')
+  const [editEnd, setEditEnd] = useState(event.end_time ? toDatetimeLocal(event.end_time) : '')
+  const [editLocation, setEditLocation] = useState(event.location ?? '')
+  const [saving, setSaving] = useState(false)
+
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const startEdit = () => {
+    setEditTitle(event.title)
+    setEditDesc(event.description ?? '')
+    setEditScheduled(event.scheduled_at ? toDatetimeLocal(event.scheduled_at) : '')
+    setEditEnd(event.end_time ? toDatetimeLocal(event.end_time) : '')
+    setEditLocation(event.location ?? '')
+    setEditing(true)
+  }
+
+  const saveEdit = async () => {
+    if (!token || !editTitle.trim()) return
+    setSaving(true)
+    const res = await fetch(`/api/events/${event.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-user-token': token },
+      body: JSON.stringify({
+        title: editTitle,
+        description: editDesc,
+        scheduled_at: editScheduled || null,
+        end_time: editEnd || null,
+        location: editLocation || null,
+      }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      onUpdate({ ...event, ...updated })
+      setEditing(false)
+    }
+    setSaving(false)
+  }
+
+  const handleDelete = async () => {
+    if (!token) return
+    setDeleting(true)
+    const res = await fetch(`/api/events/${event.id}`, {
+      method: 'DELETE',
+      headers: { 'x-user-token': token },
+    })
+    if (res.ok) onDelete(event.id)
+    else setDeleting(false)
+  }
+
+  if (editing) {
+    return (
+      <div className="p-4 rounded-xl border border-indigo-700 bg-zinc-900 space-y-2">
+        <input
+          value={editTitle}
+          onChange={e => setEditTitle(e.target.value)}
+          placeholder="Title"
+          required
+          className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        />
+        <input
+          value={editDesc}
+          onChange={e => setEditDesc(e.target.value)}
+          placeholder="Description (optional)"
+          className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        />
+        <input
+          value={editLocation}
+          onChange={e => setEditLocation(e.target.value)}
+          placeholder="Location (optional)"
+          className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        />
+        <div>
+          <label className="text-xs text-zinc-500 mb-1 block">Start time</label>
+          <input
+            type="datetime-local"
+            value={editScheduled}
+            onChange={e => setEditScheduled(e.target.value)}
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-zinc-500 mb-1 block">End time (optional)</label>
+          <input
+            type="datetime-local"
+            value={editEnd}
+            onChange={e => setEditEnd(e.target.value)}
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={() => setEditing(false)}
+            className="flex-1 py-2.5 text-sm font-medium rounded-xl bg-zinc-700 hover:bg-zinc-600 text-zinc-200 transition-colors touch-manipulation"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={saveEdit}
+            disabled={saving || !editTitle.trim()}
+            className="flex-1 py-2.5 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors touch-manipulation"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={`rounded-xl border border-zinc-800 bg-zinc-900 p-5 space-y-4 ${isPast ? 'opacity-50' : ''}`}>
       {/* Header */}
       <div className="space-y-1.5">
-        <h3 className="font-semibold text-zinc-100 text-base leading-tight">{event.title}</h3>
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-semibold text-zinc-100 text-base leading-tight">{event.title}</h3>
+          {isOwner && (
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={startEdit}
+                className="p-1.5 text-zinc-600 hover:text-zinc-300 transition-colors rounded-lg hover:bg-zinc-800 touch-manipulation"
+                title="Edit"
+              >
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-3.5 h-3.5">
+                  <path d="M11.5 2.5a1.414 1.414 0 012 2L5 13H2v-3L11.5 2.5z" />
+                </svg>
+              </button>
+              {confirmDelete ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="text-xs px-2 py-1 rounded-lg bg-red-900 text-red-300 hover:bg-red-800 touch-manipulation"
+                  >
+                    {deleting ? '…' : 'Delete'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="text-xs px-2 py-1 rounded-lg bg-zinc-800 text-zinc-400 hover:bg-zinc-700 touch-manipulation"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="p-1.5 text-zinc-600 hover:text-red-400 transition-colors rounded-lg hover:bg-zinc-800 touch-manipulation"
+                  title="Delete"
+                >
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-3.5 h-3.5">
+                    <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 9h8l1-9" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
         {event.description && (
           <p className="text-sm text-zinc-500">{event.description}</p>
         )}
 
-        {/* Date / time */}
         {event.scheduled_at ? (
           <div className="text-sm font-medium text-indigo-400">
             {formatDate(event.scheduled_at)}
-            {(event.scheduled_at || event.end_time) && (
-              <span className="text-zinc-400 font-normal ml-1">
-                · {formatTime(event.scheduled_at)}
-                {event.end_time && ` – ${formatTime(event.end_time)}`}
-              </span>
-            )}
+            <span className="text-zinc-400 font-normal ml-1">
+              · {formatTime(event.scheduled_at)}
+              {event.end_time && ` – ${formatTime(event.end_time)}`}
+            </span>
           </div>
         ) : (
           <p className="text-sm text-zinc-600">Time TBD</p>
         )}
 
-        {/* Location */}
         {event.location && <LocationLink location={event.location} />}
       </div>
 
-      {/* RSVP counts + names */}
       {hasRsvps && (
         <div className="border-t border-zinc-800 pt-3 space-y-1.5">
           <RSVPNames names={event.rsvp_yes_names} label="Going" color="text-emerald-400" />
@@ -85,7 +245,6 @@ function EventCard({ event, token, onRsvp }: {
         </div>
       )}
 
-      {/* RSVP buttons */}
       {token && (
         <div className="flex gap-2 pt-1">
           {([
@@ -152,11 +311,19 @@ export default function EventsList({ upcomingOnly = false }: { upcomingOnly?: bo
     )
   }
 
+  const cardProps = (e: EventWithRSVPs) => ({
+    event: e,
+    token,
+    onRsvp: handleRsvp,
+    onDelete: (id: string) => setEvents(prev => prev.filter(ev => ev.id !== id)),
+    onUpdate: (updated: EventWithRSVPs) => setEvents(prev => prev.map(ev => ev.id === updated.id ? { ...ev, ...updated } : ev)),
+  })
+
   return (
     <div className="space-y-6">
       {upcoming.length > 0 && (
         <div className="space-y-3">
-          {upcoming.map(e => <EventCard key={e.id} event={e} token={token} onRsvp={handleRsvp} />)}
+          {upcoming.map(e => <EventCard key={e.id} {...cardProps(e)} />)}
         </div>
       )}
       {!upcomingOnly && past.length > 0 && (
@@ -170,7 +337,7 @@ export default function EventsList({ upcomingOnly = false }: { upcomingOnly?: bo
           </button>
           {showPast && (
             <div className="space-y-3">
-              {past.map(e => <EventCard key={e.id} event={e} token={token} onRsvp={handleRsvp} />)}
+              {past.map(e => <EventCard key={e.id} {...cardProps(e)} />)}
             </div>
           )}
         </div>

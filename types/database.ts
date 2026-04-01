@@ -118,6 +118,7 @@ export type Database = {
           end_time: string | null
           location: string | null
           created_at: string
+          created_by: string | null
         }
         Insert: {
           id?: string
@@ -128,6 +129,7 @@ export type Database = {
           end_time?: string | null
           location?: string | null
           created_at?: string
+          created_by?: string | null
         }
         Update: {
           id?: string
@@ -138,6 +140,7 @@ export type Database = {
           end_time?: string | null
           location?: string | null
           created_at?: string
+          created_by?: string | null
         }
       }
       rsvps: {
@@ -186,6 +189,7 @@ export type IdeaWithVotes = Idea & {
 export type EventWithRSVPs = Event & {
   end_time: string | null
   location: string | null
+  created_by: string | null
   rsvp_yes: number
   rsvp_maybe: number
   rsvp_no: number

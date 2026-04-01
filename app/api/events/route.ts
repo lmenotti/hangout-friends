@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
       end_time: event.end_time ?? null,
       location: event.location ?? null,
       created_at: event.created_at,
+      created_by: event.created_by ?? null,
       rsvp_yes: rsvps.filter((r: any) => r.status === 'yes').length,
       rsvp_maybe: rsvps.filter((r: any) => r.status === 'maybe').length,
       rsvp_no: rsvps.filter((r: any) => r.status === 'no').length,
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
       end_time: end_time || null,
       location: location?.trim() || null,
       idea_id: idea_id || null,
+      created_by: user.id,
     })
     .select()
     .single()
