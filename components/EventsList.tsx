@@ -102,8 +102,8 @@ function EventCard({ event, token, viewerTravel, onRsvp, onDelete, onSaved }: {
         body: JSON.stringify({
           title: editTitle,
           description: editDesc,
-          scheduled_at: editScheduled || null,
-          end_time: editEnd || null,
+          scheduled_at: editScheduled ? new Date(editScheduled).toISOString() : null,
+          end_time: editEnd ? new Date(editEnd).toISOString() : null,
           location: editLocation || null,
         }),
       })
