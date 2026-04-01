@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
+import PlacesInput from '@/components/PlacesInput'
 
 export default function NameModal() {
   const { user, loading, setUser } = useUser()
@@ -66,13 +67,11 @@ export default function NameModal() {
           />
 
           {!isReturning && !needsPassword && (
-            <input
-              type="text"
+            <PlacesInput
               value={homeLocation}
-              onChange={e => setHomeLocation(e.target.value)}
-              placeholder="Your city or neighborhood (optional)"
+              onChange={setHomeLocation}
+              placeholder="Your home address or neighborhood (optional)"
               className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3.5 text-base text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-              maxLength={100}
             />
           )}
 

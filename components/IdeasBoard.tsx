@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useUser } from '@/context/UserContext'
 import type { IdeaWithVotes } from '@/types/database'
+import PlacesInput from '@/components/PlacesInput'
+
+type TravelTimes = { car: number | null; transit: number | null; walk: number | null }
 
 function formatDuration(minutes: number) {
   if (minutes < 60) return `${minutes}m`
@@ -33,9 +36,11 @@ function toDatetimeLocal(iso: string) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-function IdeaCard({ idea, token, onVote, onScheduled, onDelete, onUpdate }: {
+function IdeaCard({ idea, token, viewerTravel, viewerOrigin, onVote, onScheduled, onDelete, onUpdate }: {
   idea: IdeaWithVotes
   token: string | null
+  viewerTravel: TravelTimes | null
+  viewerOrigin: string | null
   onVote: (id: string) => void
   onScheduled: (id: string) => void
   onDelete: (id: string) => void
@@ -44,9 +49,19 @@ function IdeaCard({ idea, token, onVote, onScheduled, onDelete, onUpdate }: {
   const { user } = useUser()
   const isOwner = !!user && user.id === idea.created_by
 
-  const transitTime = formatTravel(idea.travel_transit_minutes)
-  const carTime = formatTravel(idea.travel_car_minutes)
-  const walkTime = formatTravel(idea.travel_walk_minutes)
+  // Use viewer's own travel times if available, fall back to stored (creator's) times
+  const travel = viewerTravel ?? {
+    car: idea.travel_car_minutes,
+    transit: idea.travel_transit_minutes,
+    walk: idea.travel_walk_minutes,
+  }
+  const travelLabel = viewerTravel
+    ? `Your commute`
+    : `From ${idea.travel_origin ?? 'Berkeley'}`
+
+  const transitTime = formatTravel(travel.transit)
+  const carTime = formatTravel(travel.car)
+  const walkTime = formatTravel(travel.walk)
   const canSchedule = idea.vote_count >= 2
 
   // Edit state
@@ -182,9 +197,9 @@ function IdeaCard({ idea, token, onVote, onScheduled, onDelete, onUpdate }: {
           placeholder="Details (optional)"
           className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         />
-        <input
+        <PlacesInput
           value={editLocation}
-          onChange={e => setEditLocation(e.target.value)}
+          onChange={setEditLocation}
           placeholder="Location (optional)"
           className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         />
@@ -341,9 +356,7 @@ function IdeaCard({ idea, token, onVote, onScheduled, onDelete, onUpdate }: {
 
           {(transitTime || carTime || walkTime) && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
-              <span className="text-xs text-zinc-600">
-                From {idea.travel_origin ?? 'Berkeley'}:
-              </span>
+              <span className="text-xs text-zinc-600">{travelLabel}:</span>
               {walkTime && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚶</span><span>{walkTime}</span></span>}
               {transitTime && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚌</span><span>{transitTime}</span></span>}
               {carTime && <span className="flex items-center gap-1 text-xs text-zinc-500"><span>🚗</span><span>{carTime}</span></span>}
@@ -431,12 +444,33 @@ export default function IdeasBoard({ showSchedule = false }: { showSchedule?: bo
   const [isOutdoor, setIsOutdoor] = useState(false)
   const [suggestedAt, setSuggestedAt] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  // Viewer-specific travel times, keyed by idea id
+  const [viewerTravelMap, setViewerTravelMap] = useState<Record<string, TravelTimes>>({})
 
-  const fetchIdeas = () => {
-    fetch('/api/ideas', { headers: token ? { 'x-user-token': token } : {} })
-      .then(r => r.json())
-      .then(data => setIdeas(Array.isArray(data) ? data.sort((a, b) => b.vote_count - a.vote_count) : []))
-      .finally(() => setLoading(false))
+  const fetchViewerTravel = async (loadedIdeas: IdeaWithVotes[], origin: string) => {
+    const withLoc = loadedIdeas.filter(i => i.location)
+    if (!withLoc.length) return
+    const res = await fetch('/api/travel-time', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ origin, destinations: withLoc.map(i => i.location!) }),
+    })
+    if (!res.ok) return
+    const times: TravelTimes[] = await res.json()
+    const map: Record<string, TravelTimes> = {}
+    withLoc.forEach((idea, i) => { map[idea.id] = times[i] })
+    setViewerTravelMap(map)
+  }
+
+  const fetchIdeas = async () => {
+    const res = await fetch('/api/ideas', { headers: token ? { 'x-user-token': token } : {} })
+    const data = await res.json()
+    const sorted: IdeaWithVotes[] = Array.isArray(data)
+      ? data.sort((a: IdeaWithVotes, b: IdeaWithVotes) => b.vote_count - a.vote_count)
+      : []
+    setIdeas(sorted)
+    setLoading(false)
+    if (user?.home_location) await fetchViewerTravel(sorted, user.home_location)
   }
 
   useEffect(() => { fetchIdeas() }, [token])
@@ -496,8 +530,9 @@ export default function IdeasBoard({ showSchedule = false }: { showSchedule?: bo
             placeholder="Details (optional)"
             className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-base text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
           />
-          <input
-            type="text" value={location} onChange={e => setLocation(e.target.value)}
+          <PlacesInput
+            value={location}
+            onChange={setLocation}
             placeholder="Location (optional) — travel time will be estimated"
             className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-base text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
           />
@@ -547,6 +582,8 @@ export default function IdeasBoard({ showSchedule = false }: { showSchedule?: bo
               key={idea.id}
               idea={idea}
               token={token}
+              viewerTravel={viewerTravelMap[idea.id] ?? null}
+              viewerOrigin={user?.home_location ?? null}
               onVote={handleVote}
               onScheduled={id => setIdeas(prev => prev.filter(i => i.id !== id))}
               onDelete={id => setIdeas(prev => prev.filter(i => i.id !== id))}
