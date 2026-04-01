@@ -34,10 +34,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'None of the voters have filled in their availability yet.' }, { status: 400 })
   }
 
+  // Find slots blocked by existing event RSVPs for any voter
+  const { data: eventRsvps } = await supabase
+    .from('rsvps')
+    .select('user_id, status, events(scheduled_at, end_time)')
+    .in('user_id', voterIds)
+    .in('status', ['yes', 'maybe'])
+
+  const blockedSlots = new Set<string>()
+  for (const rsvp of eventRsvps ?? []) {
+    const event = (rsvp as any).events
+    if (!event?.scheduled_at) continue
+    const start = new Date(event.scheduled_at)
+    const startHour = start.getHours()
+    let endHour = startHour + 1
+    if (event.end_time) {
+      const end = new Date(event.end_time)
+      endHour = end.getHours() + (end.getMinutes() > 0 ? 1 : 0)
+    }
+    for (let h = startHour; h < endHour; h++) {
+      blockedSlots.add(`${start.getDay()}-${h}`)
+    }
+  }
+
   // Build per-slot voter count
   const aggregate: Record<string, Set<string>> = {}
   for (const row of voterAvailability) {
     const key = `${row.day_of_week}-${row.hour}`
+    if (blockedSlots.has(key)) continue
     if (!aggregate[key]) aggregate[key] = new Set()
     aggregate[key].add(row.user_id)
   }

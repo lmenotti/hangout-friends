@@ -30,11 +30,41 @@ export async function GET(req: NextRequest) {
     if (user && row.user_id === user.id) userSlots.add(key)
   }
 
+  // Build event slots for the current user (yes/maybe RSVPs → day+hour blocks)
+  const eventSlots: Record<string, 'yes' | 'maybe'> = {}
+  if (user) {
+    const { data: rsvps } = await supabase
+      .from('rsvps')
+      .select('status, events(scheduled_at, end_time)')
+      .eq('user_id', user.id)
+      .in('status', ['yes', 'maybe'])
+
+    for (const rsvp of rsvps ?? []) {
+      const event = (rsvp as any).events
+      if (!event?.scheduled_at) continue
+      const start = new Date(event.scheduled_at)
+      const dayOfWeek = start.getDay()
+      const startHour = start.getHours()
+      let endHour = startHour + 1
+      if (event.end_time) {
+        const end = new Date(event.end_time)
+        endHour = end.getHours() + (end.getMinutes() > 0 ? 1 : 0)
+      }
+      for (let h = startHour; h < endHour; h++) {
+        const key = `${dayOfWeek}-${h}`
+        if (!eventSlots[key] || rsvp.status === 'yes') {
+          eventSlots[key] = rsvp.status as 'yes' | 'maybe'
+        }
+      }
+    }
+  }
+
   return NextResponse.json({
     aggregate,
     namesPerSlot,
     userSlots: Array.from(userSlots),
     totalUsers,
+    eventSlots,
   })
 }
 
