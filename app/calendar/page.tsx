@@ -128,7 +128,7 @@ export default function CalendarPage() {
                                 <Button
                                     bg={calendarView[currentView] == Views.WEEK ? "#191970" : "white"}
                                     color={calendarView[currentView] == Views.WEEK ? "white" : "black"}
-                                    onClick={handleDayClick}
+                                    onClick={handleWeekClick}
                                 >
                                     Week
                                 </Button>
@@ -136,7 +136,7 @@ export default function CalendarPage() {
                                 <Button
                                     bg={calendarView[currentView] == Views.MONTH ? "#191970" : "white"}
                                     color={calendarView[currentView] == Views.MONTH ? "white" : "black"}
-                                    onClick={handleDayClick}
+                                    onClick={handleMonthClick}
                                 >
                                     Month
                                 </Button>
