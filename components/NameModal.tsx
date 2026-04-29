@@ -15,10 +15,11 @@ export default function NameModal() {
   const [isReturning, setIsReturning] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [dismissed, setDismissed] = useState(() => sessionStorage.getItem('guest') === '1')
   const checkDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   // Admin page has its own PIN auth — don't force sign-in there
-  if (loading || user || pathname === '/admin') return null
+  if (loading || user || dismissed || pathname === '/admin') return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -117,6 +118,13 @@ export default function NameModal() {
             className="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-base font-medium py-3.5 rounded-xl transition-colors touch-manipulation"
           >
             {submitting ? 'Joining…' : 'Continue'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { sessionStorage.setItem('guest', '1'); setDismissed(true) }}
+            className="w-full text-zinc-500 hover:text-zinc-300 text-sm py-2 transition-colors touch-manipulation"
+          >
+            Browse as guest
           </button>
         </form>
       </div>

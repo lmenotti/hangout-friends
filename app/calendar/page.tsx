@@ -34,10 +34,7 @@ const googleCalendarEventColor = "#0bad12";
 export default function CalendarPage() {
     const [currentView, setCurrentView] = useState(1);
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [currentDateText, setCurrentDateText] = useState(`
-    ${months[currentDate.getMonth()]} 
-    ${currentDate.getDate()}, 
-    ${currentDate.getFullYear()}`)
+    const [currentDateText, setCurrentDateText] = useState('')
 
     useEffect(() => {
         setCurrentDateText(`
@@ -112,10 +109,10 @@ export default function CalendarPage() {
                                     >
                                         {currentDateText}
                                     </Text>
-                                    <Button bg="white" onClick={handleTodayClick}>Today</Button>
+                                    <Button bg="black" onClick={handleTodayClick}>Today</Button>
                                 </VStack>
                                 <HStack position="relative" borderRadius={"4px"}>
-                                <Button bg="white" onClick={handlePrevClick}>Previous</Button>
+                                <Button bg="black" onClick={handlePrevClick}>Previous</Button>
                                 <HStack bg="white" height="100%" borderRadius={"10px"}>
                                 <Button
                                     bg={calendarView[currentView] == Views.DAY ? "#191970" : "white"}
@@ -141,7 +138,7 @@ export default function CalendarPage() {
                                     Month
                                 </Button>
                             </HStack>
-                                <Button bg="white" onClick={handleNextClick}>Next</Button>
+                                <Button bg="black" onClick={handleNextClick}>Next</Button>
                             </HStack>
                             <HStack position="relative" borderRadius={"10px"}>
                             </HStack>
