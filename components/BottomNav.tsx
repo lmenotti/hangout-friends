@@ -58,6 +58,17 @@ const tabs = [
       </svg>
     ),
   },
+  {                                                                                                                                                                                                             
+    href: '/calendar',                                                                                                                                                                                          
+    label: 'Calendar',                                                                                                                                                                                          
+    icon: (active: boolean) => (                                                                                                                                                                              
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.25 : 1.75} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+        <rect x="3" y="4" width="18" height="18" rx="2" />                                                                                                           
+        <path d="M16 2v4M8 2v4M3 10h18" />                                                                                                                                                                      
+        <circle cx="12" cy="15" r="2" />                                                                                                                                                                        
+      </svg>                                                                                                                                                                                                    
+    ),                                                                                                                                                                                                          
+  },
 ]
 
 export default function BottomNav() {

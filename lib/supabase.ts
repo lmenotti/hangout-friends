@@ -1,5 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { Database } from '@/types/database.types'
 
+createClient<Database>(url, key)
 let _client: SupabaseClient | null = null
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

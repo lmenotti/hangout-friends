@@ -5,7 +5,7 @@ function createOAuthClient() {
     return new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      "",
+      "http://localhost:3000/api/google/callback",
   );
 }
 
@@ -21,3 +21,5 @@ async function saveTokens(userId, tokens){
   })
   .eq('id', userId);
 }
+
+export { saveTokens, createOAuthClient };
