@@ -1,7 +1,7 @@
 'use client'
 import { ChakraProvider, defaultSystem, Box, Button, Checkbox, Container, Separator, Flex, Grid, HStack, Icon, IconButton, Spinner, Stack, Text, Tooltip, VStack } from "@chakra-ui/react";
 import { Calendar, Views, dateFnsLocalizer, momentLocalizer} from "react-big-calendar";
-import moment from 'moment'
+import "react-big-calendar/lib/css/react-big-calendar.css";
 import { useEffect, useRef, useState } from "react";
 import { enUS } from 'date-fns/locale/en-US';
 import {format} from 'date-fns/format';
@@ -90,7 +90,7 @@ export default function CalendarPage() {
                     >
                     {/*Middle container*/}
                     <Flex
-                    bg="#191970"
+                    bg="#27272a"
                     width="100%"
                     height="100%"
                     padding="10px"
@@ -115,7 +115,7 @@ export default function CalendarPage() {
                                 <Button bg="black" onClick={handlePrevClick}>Previous</Button>
                                 <HStack bg="white" height="100%" borderRadius={"10px"}>
                                 <Button
-                                    bg={calendarView[currentView] == Views.DAY ? "#191970" : "white"}
+                                    bg={calendarView[currentView] == Views.DAY ? "#27272a" : "white"}
                                     color={calendarView[currentView] == Views.DAY ? "white" : "black"}
                                     onClick={handleDayClick}
                                 >
@@ -123,7 +123,7 @@ export default function CalendarPage() {
                                 </Button>
                                 <Separator orientation="vertical" borderColor="gray.600" height="25px" />
                                 <Button
-                                    bg={calendarView[currentView] == Views.WEEK ? "#191970" : "white"}
+                                    bg={calendarView[currentView] == Views.WEEK ? "#27272a" : "white"}
                                     color={calendarView[currentView] == Views.WEEK ? "white" : "black"}
                                     onClick={handleWeekClick}
                                 >
@@ -131,7 +131,7 @@ export default function CalendarPage() {
                                 </Button>
                                 <Separator orientation="vertical" borderColor="gray.600" height="25px" />
                                 <Button
-                                    bg={calendarView[currentView] == Views.MONTH ? "#191970" : "white"}
+                                    bg={calendarView[currentView] == Views.MONTH ? "#27272a" : "white"}
                                     color={calendarView[currentView] == Views.MONTH ? "white" : "black"}
                                     onClick={handleMonthClick}
                                 >
@@ -151,6 +151,7 @@ export default function CalendarPage() {
                                 date={currentDate}
                                 view={calendarView[currentView]}
                                 toolbar={false}
+                                selectable={true}
                             />
                         </VStack>
                     </Flex>
