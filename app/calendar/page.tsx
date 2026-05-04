@@ -61,7 +61,7 @@ function slotsToEvents(
 }
 
 export default function CalendarPage() {
-  const { user, token } = useUser()
+  const { user, token, showSignIn } = useUser()
   const [tab, setTab] = useState<'group' | 'my'>('group')
   const [showMyEvents, setShowMyEvents] = useState(true)
   const [showIndividual, setShowIndividual] = useState(true)
@@ -307,35 +307,46 @@ export default function CalendarPage() {
 
       {/* Action buttons */}
       <div className="flex items-center justify-between flex-wrap gap-3 pt-2 border-t border-zinc-800">
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={markNineToFive}
-            className="px-3 py-2 text-sm rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 transition-colors touch-manipulation"
-          >
-            Mark 9–5 available
-          </button>
-          <button
-            onClick={clearAll}
-            className="px-3 py-2 text-sm rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 transition-colors touch-manipulation"
-          >
-            Clear all
-          </button>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setLocalSlots(new Set(gridData.userSlots))}
-            className="px-4 py-2 text-sm rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 transition-colors touch-manipulation"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={saveAvailability}
-            disabled={saving || !user}
-            className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors touch-manipulation"
-          >
-            {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Availability'}
-          </button>
-        </div>
+        {!user ? (
+          <p className="text-sm text-zinc-500">
+            <button onClick={showSignIn} className="text-indigo-400 hover:text-indigo-300 transition-colors touch-manipulation">
+              Sign in
+            </button>
+            {' '}to mark your availability.
+          </p>
+        ) : (
+          <>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={markNineToFive}
+                className="px-3 py-2 text-sm rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 transition-colors touch-manipulation"
+              >
+                Mark 9–5 available
+              </button>
+              <button
+                onClick={clearAll}
+                className="px-3 py-2 text-sm rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 transition-colors touch-manipulation"
+              >
+                Clear all
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setLocalSlots(new Set(gridData.userSlots))}
+                className="px-4 py-2 text-sm rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 transition-colors touch-manipulation"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveAvailability}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors touch-manipulation"
+              >
+                {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Availability'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

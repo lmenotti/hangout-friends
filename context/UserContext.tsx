@@ -7,26 +7,34 @@ type UserContextType = {
   user: User | null
   token: string | null
   loading: boolean
+  guestMode: boolean
   setUser: (user: User, token: string) => void
   updateUser: (user: User) => void
   clearUser: () => void
+  browseAsGuest: () => void
+  showSignIn: () => void
 }
 
 const UserContext = createContext<UserContextType>({
   user: null,
   token: null,
   loading: true,
+  guestMode: false,
   setUser: () => {},
   updateUser: () => {},
   clearUser: () => {},
+  browseAsGuest: () => {},
+  showSignIn: () => {},
 })
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [guestMode, setGuestMode] = useState(false)
 
   useEffect(() => {
+    if (sessionStorage.getItem('guest') === '1') setGuestMode(true)
     const storedToken = localStorage.getItem('gs_token')
     if (!storedToken) {
       setLoading(false)
@@ -61,8 +69,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setToken(null)
   }
 
+  const browseAsGuest = () => {
+    sessionStorage.setItem('guest', '1')
+    setGuestMode(true)
+  }
+
+  const showSignIn = () => {
+    sessionStorage.removeItem('guest')
+    setGuestMode(false)
+  }
+
   return (
-    <UserContext.Provider value={{ user, token, loading, setUser, updateUser, clearUser }}>
+    <UserContext.Provider value={{ user, token, loading, guestMode, setUser, updateUser, clearUser, browseAsGuest, showSignIn }}>
       {children}
     </UserContext.Provider>
   )

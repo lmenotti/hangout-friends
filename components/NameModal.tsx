@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
 import PlacesInput from '@/components/PlacesInput'
 
 export default function NameModal() {
-  const { user, loading, setUser } = useUser()
+  const { user, loading, guestMode, setUser, browseAsGuest } = useUser()
   const pathname = usePathname()
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
@@ -15,15 +15,10 @@ export default function NameModal() {
   const [isReturning, setIsReturning] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [dismissed, setDismissed] = useState(false)
-
-  useEffect(() => {
-    if (sessionStorage.getItem('guest') === '1') setDismissed(true)
-  }, [])
   const checkDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   // Admin page has its own PIN auth — don't force sign-in there
-  if (loading || user || dismissed || pathname === '/admin') return null
+  if (loading || user || guestMode || pathname === '/admin') return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -125,7 +120,7 @@ export default function NameModal() {
           </button>
           <button
             type="button"
-            onClick={() => { sessionStorage.setItem('guest', '1'); setDismissed(true) }}
+            onClick={browseAsGuest}
             className="w-full text-zinc-500 hover:text-zinc-300 text-sm py-2 transition-colors touch-manipulation"
           >
             Browse as guest
