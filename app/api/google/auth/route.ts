@@ -9,7 +9,7 @@ function createOAuthClient() {
   );
 }
 
-async function saveTokens(userId, tokens){
+async function saveTokens(userId:string, tokens){
   await supabase
   .from('users')
   .update({
@@ -22,4 +22,45 @@ async function saveTokens(userId, tokens){
   .eq('id', userId);
 }
 
-export { saveTokens, createOAuthClient };
+export async function GET(request: Request) {                                                                                                                                                                 
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get('userId');
+  const oauth2Client = createOAuthClient();
+  const authUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: ['https://www.googleapis.com/auth/calendar'],
+    state: userId ?? '',
+  });
+  return Response.redirect(authUrl);
+} 
+
+async function storeGoogleCalendarEvents(userId: string) {
+  const res = await fetch('/api/google/calendar/store', { 
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+  return res.json();
+}
+
+async function getStoredGoogleCalendarEvents(userId: string) {
+  const res = await fetch(`/api/google/calendar/events?userId=${userId}`);
+  const data = await res.json();
+  return data.events || [];
+}
+
+async function connectGoogleAccount(userId: string) {
+  window.location.href = `/api/google/auth?userId=${userId}`;
+}
+
+async function syncGoogleEvents(userId: string){
+  const res = await fetch('/api/google/calendar/sync', { 
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+  return res.json();
+}
+
+export { saveTokens, createOAuthClient, syncGoogleEvents, getStoredGoogleCalendarEvents, storeGoogleCalendarEvents, connectGoogleAccount};
