@@ -15,7 +15,11 @@ export default function NameModal() {
   const [isReturning, setIsReturning] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [dismissed, setDismissed] = useState(() => sessionStorage.getItem('guest') === '1')
+  const [dismissed, setDismissed] = useState(false)
+
+  useEffect(() => {
+    if (sessionStorage.getItem('guest') === '1') setDismissed(true)
+  }, [])
   const checkDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   // Admin page has its own PIN auth — don't force sign-in there

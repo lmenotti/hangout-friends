@@ -6,7 +6,6 @@ import { UserProvider } from '@/context/UserContext'
 import Nav from '@/components/Nav'
 import BottomNav from '@/components/BottomNav'
 import NameModal from '@/components/NameModal'
-import Providers from '@/components/ChakraProvider'
 
 const geistSans = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
@@ -21,9 +20,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
-      <body className="min-h-screen antialiased overscroll-none">
+      <body className="min-h-screen antialiased overscroll-none" suppressHydrationWarning>
         <UserProvider>
-          <Providers>
             <Nav />
             <NameModal />
             <main
@@ -33,7 +31,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {children}
             </main>
             <BottomNav />
-          </Providers>
         </UserProvider>
         <Script
           id="google-maps"
