@@ -6,6 +6,8 @@ import { useUser } from '@/context/UserContext'
 
 const links = [
   { href: '/availability', label: 'Availability' },
+  { href: '/pods', label: 'Pods' },
+  { href: '/polls/new', label: 'Poll' },
   { href: '/ideas', label: 'Ideas' },
   { href: '/events', label: 'Events' },
   { href: '/calendar', label: 'Calendar' },

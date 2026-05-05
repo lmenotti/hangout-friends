@@ -10,16 +10,28 @@ async function getUserFromToken(token: string | null) {
 export async function GET(req: NextRequest) {
   const token = req.headers.get('x-user-token')
   const user = await getUserFromToken(token)
+  const podId = req.nextUrl.searchParams.get('pod_id')
 
-  const { data: allAvailability } = await supabase
-    .from('availability')
-    .select('day_of_week, hour, minute, user_id, users(name)')
+  let allUsers: { id: string; name: string }[] = []
+  if (podId) {
+    const { data: members } = await supabase
+      .from('pod_members')
+      .select('users(id, name)')
+      .eq('pod_id', podId)
+    allUsers = (members ?? []).map((m: any) => m.users).filter(Boolean)
+  } else {
+    const { data } = await supabase.from('users').select('id, name').order('name')
+    allUsers = data ?? []
+  }
 
-  const { data: allUsers } = await supabase.from('users').select('id, name').order('name')
-  const totalUsers = allUsers?.length ?? 0
-  const memberNames = (allUsers ?? [])
-    .map((u) => u.name)
-    .filter((n): n is string => Boolean(n))
+  const userIds = allUsers.map(u => u.id)
+  const availQuery = supabase.from('availability').select('day_of_week, hour, minute, user_id, users(name)')
+  const { data: allAvailability } = userIds.length
+    ? await availQuery.in('user_id', userIds)
+    : await availQuery
+
+  const totalUsers = allUsers.length
+  const memberNames = allUsers.map(u => u.name).filter((n): n is string => Boolean(n))
 
   const aggregate: Record<string, number> = {}
   const namesPerSlot: Record<string, string[]> = {}
@@ -34,13 +46,7 @@ export async function GET(req: NextRequest) {
     if (user && row.user_id === user.id) userSlots.push(key)
   }
 
-  return NextResponse.json({
-    aggregate,
-    namesPerSlot,
-    userSlots,
-    totalUsers,
-    memberNames,
-  })
+  return NextResponse.json({ aggregate, namesPerSlot, userSlots, totalUsers, memberNames })
 }
 
 export async function POST(req: NextRequest) {
