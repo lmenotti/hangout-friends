@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+
   const { data: poll, error } = await supabase
     .from('polls')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (error) return NextResponse.json({ error: 'Poll not found' }, { status: 404 })
@@ -13,7 +15,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
   const { data: responses } = await supabase
     .from('poll_responses')
     .select('*')
-    .eq('poll_id', params.id)
+    .eq('poll_id', id)
     .order('created_at')
 
   const aggregate: Record<string, number> = {}

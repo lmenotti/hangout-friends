@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const { respondent_name, availability } = await req.json()
 
   if (!respondent_name?.trim()) {
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const { data: existing } = await supabase
     .from('poll_responses')
     .select('id')
-    .eq('poll_id', params.id)
+    .eq('poll_id', id)
     .eq('respondent_name', name)
     .single()
 
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const { data, error } = await supabase
     .from('poll_responses')
-    .insert({ poll_id: params.id, respondent_name: name, availability })
+    .insert({ poll_id: id, respondent_name: name, availability })
     .select()
     .single()
 

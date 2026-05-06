@@ -7,14 +7,15 @@ async function getUserFromToken(token: string | null) {
   return data
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const user = await getUserFromToken(req.headers.get('x-user-token'))
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: membership } = await supabase
     .from('pod_members')
     .select('role')
-    .eq('pod_id', params.id)
+    .eq('pod_id', id)
     .eq('user_id', user.id)
     .single()
 
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const { data: pod, error } = await supabase
     .from('pods')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (error) return NextResponse.json({ error: 'Pod not found' }, { status: 404 })
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const { data: members } = await supabase
     .from('pod_members')
     .select('role, joined_at, users(id, name, last_seen)')
-    .eq('pod_id', params.id)
+    .eq('pod_id', id)
     .order('joined_at')
 
   return NextResponse.json({ pod, members: members ?? [], role: membership.role })
