@@ -5,9 +5,13 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useUser } from '@/context/UserContext'
 import AvailabilityGrid from '@/components/AvailabilityGrid'
+import PodIdeasTab from '@/components/PodIdeasTab'
+import PodEventsTab from '@/components/PodEventsTab'
 
 type Pod = { id: string; name: string; invite_code: string; created_at: string }
 type Member = { role: string; joined_at: string; users: { id: string; name: string; last_seen: string | null } }
+
+type Tab = 'availability' | 'ideas' | 'events' | 'members'
 
 function timeSince(iso: string | null) {
   if (!iso) return 'never'
@@ -28,6 +32,7 @@ export default function PodPage() {
   const [role, setRole] = useState<string>('member')
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [tab, setTab] = useState<Tab>('availability')
 
   useEffect(() => {
     if (!token) { setLoading(false); return }
@@ -52,6 +57,13 @@ export default function PodPage() {
   if (loading) return <div className="h-80 rounded-xl bg-zinc-800/50 animate-pulse" />
   if (!pod) return <p className="text-zinc-500">Pod not found or you&apos;re not a member.</p>
 
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'availability', label: 'Availability' },
+    { key: 'ideas', label: 'Ideas' },
+    { key: 'events', label: 'Events' },
+    { key: 'members', label: 'Members' },
+  ]
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -73,8 +85,40 @@ export default function PodPage() {
         </button>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-5">
-        {/* Members */}
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-zinc-800 overflow-x-auto">
+        {tabs.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px touch-manipulation ${
+              tab === t.key
+                ? 'border-indigo-500 text-indigo-400'
+                : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {tab === 'availability' && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+          <h2 className="text-sm font-medium text-zinc-300 mb-3">Group availability</h2>
+          <AvailabilityGrid podId={id} readOnly />
+        </div>
+      )}
+
+      {tab === 'ideas' && token && user && (
+        <PodIdeasTab podId={id} token={token} userId={user.id} role={role} />
+      )}
+
+      {tab === 'events' && token && user && (
+        <PodEventsTab podId={id} token={token} userId={user.id} role={role} />
+      )}
+
+      {tab === 'members' && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
           <h2 className="text-sm font-medium text-zinc-300 mb-3">Members</h2>
           <ul className="space-y-2">
@@ -93,13 +137,7 @@ export default function PodPage() {
             })}
           </ul>
         </div>
-
-        {/* Availability heatmap */}
-        <div className="md:col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-          <h2 className="text-sm font-medium text-zinc-300 mb-3">Group availability</h2>
-          <AvailabilityGrid podId={id} readOnly />
-        </div>
-      </div>
+      )}
     </div>
   )
 }
