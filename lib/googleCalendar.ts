@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 const { google } = require('googleapis');
-import { Database } from '@/types/database.types'
+import { Database } from '@/types/database'
 
 const listGoogleEvents = async (userId : string, calendarId: string = "primary") => {
     try {
@@ -28,7 +28,7 @@ const listGoogleEvents = async (userId : string, calendarId: string = "primary")
       });
    
    
-      oAuth2Client.on("tokens", async (tokens) => {
+      oAuth2Client.on("tokens", async (tokens: { access_token?: string | null; expiry_date?: number | null }) => {
         if (tokens.access_token) {
           await supabase                                                                                                                                                                                                
           .from('users')                                                                                                                                                                                            
@@ -58,13 +58,7 @@ const listGoogleEvents = async (userId : string, calendarId: string = "primary")
    
    
       const events = result.data.items || [];
-    }
-
-     /* return events
-      .filter((e) => {
-        return !e.iCalUID || !e.iCalUID.endsWith("");
-      })
-      .map((e) => ({
+      return events.map((e: { id: string; iCalUID: string; summary: string; description: string; start: unknown; end: unknown; colorId: string }) => ({
         id: e.id,
         iCalUID: e.iCalUID,
         summary: e.summary,
@@ -73,9 +67,8 @@ const listGoogleEvents = async (userId : string, calendarId: string = "primary")
         end: e.end,
         color: e.colorId,
       }));
-    } catch (error) {
-      console.error("Error fetching calendar:", error.message);
+    } catch (error: unknown) {
+      console.error("Error fetching calendar:", (error as Error).message);
       return null;
     }
-   };
-   */
+};
