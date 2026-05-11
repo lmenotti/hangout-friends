@@ -72,7 +72,9 @@ type GridData = {
   memberNames: string[]
 }
 
-export default function AvailabilityGrid() {
+type Props = { podId?: string; readOnly?: boolean }
+
+export default function AvailabilityGrid({ podId, readOnly = false }: Props) {
   const { user, token } = useUser()
   const [activeTab, setActiveTab] = useState<'personal' | 'group'>('personal')
   const [gridData, setGridData] = useState<GridData>({
@@ -104,7 +106,8 @@ export default function AvailabilityGrid() {
   }, [editing])
 
   const fetchGrid = async (tok: string | null) => {
-    const res = await fetch('/api/availability', {
+    const url = podId ? `/api/availability?pod_id=${podId}` : '/api/availability'
+    const res = await fetch(url, {
       headers: tok ? { 'x-user-token': tok } : {},
     })
     const data = await res.json()

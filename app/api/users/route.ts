@@ -11,17 +11,6 @@ export async function POST(req: NextRequest) {
   const trimmedPassword = password?.trim() ?? ''
   const trimmedHome = home_location?.trim() || null
 
-  // Check if name is on the approved list
-  const { data: approved } = await supabase
-    .from('approved_names')
-    .select('name')
-    .ilike('name', trimmedName)
-    .single()
-
-  if (!approved) {
-    return NextResponse.json({ error: 'Your name isn\'t on the list. Ask an admin to add you.' }, { status: 403 })
-  }
-
   // Check if name already exists (returning user)
   const { data: existing } = await supabase
     .from('users')

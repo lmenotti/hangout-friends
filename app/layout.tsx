@@ -19,18 +19,18 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="min-h-screen antialiased overscroll-none">
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+      <body className="min-h-screen antialiased overscroll-none" suppressHydrationWarning>
         <UserProvider>
-          <Nav />
-          <NameModal />
-          <main
-            className="max-w-4xl mx-auto px-4 py-8 md:pb-8"
-            style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}
-          >
-            {children}
-          </main>
-          <BottomNav />
+            <Nav />
+            <NameModal />
+            <main
+              className="max-w-4xl mx-auto px-4 py-8 md:pb-8"
+              style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}
+            >
+              {children}
+            </main>
+            <BottomNav />
         </UserProvider>
         <Script
           id="google-maps"
