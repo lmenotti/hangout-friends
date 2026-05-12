@@ -1,27 +1,64 @@
 # Hangout
 
-A group scheduling app for coordinating hangouts with friends. One shared space to find overlapping availability, vote on activity ideas, RSVP to events, and report issues.
+A link-first group scheduling app for college friend groups. Drop a plan link in iMessage, everyone marks their availability in under 30 seconds — no account, no app download, no friction.
 
 Live at [hangout-friends.vercel.app](https://hangout-friends.vercel.app)
 
+---
+
+## How it works
+
+The atomic unit is a **plan**: a shareable URL anyone can respond to without creating an account. A plan creator names the hangout, sets a date range, and shares the link. Recipients tap it, enter a first name, mark their availability, and they're done. The creator uses the availability heatmap and activity ideas to auto-schedule the best time.
+
+**Pods** are persistent groups for people who plan together repeatedly. Pods require an account and add persistent membership, a shared activity idea bank, and plan history. Most users will never need a pod — the plan link is the product.
+
+---
+
+## Current state (as of May 2026)
+
+The app is mid-pivot from a single-group shared board to the plans-first model. The core plan flow (`/polls/new`, `/polls/[id]`) exists and is being actively polished. Legacy global surfaces (`/availability`, `/ideas`, `/events`) are present in the codebase but are being deprecated in favor of plan-scoped equivalents.
+
+---
+
 ## Features
 
-- **Availability** — Weekly grid to mark free hours. Heatmap shows when the most people overlap.
-- **Ideas** — Suggest activities, upvote favorites, set duration/location/indoor-outdoor. Travel time from Berkeley estimated automatically via Google Maps.
-- **Events** — Create events with start/end time and location. RSVP yes/maybe/no. See who's coming.
-- **Auto-schedule** — One click picks the best time based on voter availability (requires 2+ upvotes and overlapping free time among voters).
-- **Accounts** — Admin-controlled approved names list. First sign-in creates the account; optional password protection.
-- **Bug reports** — In-app reporting form. Admin panel shows open/resolved reports with a Claude AI fix suggestion button.
-- **Admin panel** — Manage approved names, moderate content, review bug reports. PIN-protected at `/admin`.
+### Plans (core, no account required)
+- **Create a plan** — name + date range → shareable URL (currently `/polls/[id]`; migrating to `/p/[slug]`)
+- **Respond anonymously** — enter a first name, drag-select availability on the weekly grid
+- **Availability heatmap** — color-graded grid showing overlap density; tap a cell to see who's free
+- **Activity ideas + voting** — anyone suggests an activity, anyone upvotes; no downvotes
+- **Auto-schedule** — one click picks the best (time, activity) pair based on voter overlap
+- **RSVP** — yes / maybe / no once a plan is locked
+- **OG link previews** — rich previews in iMessage, Discord, Slack (served from `/api/og`)
+
+### Pods (account required)
+- Create a named pod, share a join link
+- Pod-scoped ideas, events, and availability
+- Pod-level auto-scheduling
+
+### Auth (in transition)
+- Current: name + optional password, token stored in localStorage (`context/UserContext.tsx`)
+- Target: email + magic link (no password, no phone number); anonymous responses identified by first name + cookie, scoped to one plan
+
+### Admin
+- PIN-protected admin panel at `/admin`
+- Moderate ideas, events, and bug reports
+- Claude AI fix-suggestion button on bug reports (requires `ANTHROPIC_API_KEY`)
+
+---
 
 ## Stack
 
 - **Next.js 16** (App Router, TypeScript)
 - **Tailwind CSS v4**
-- **Supabase** (Postgres + RLS, no Supabase auth — custom token system)
-- **Vercel** (hosting, automatic deploys from GitHub)
+- **Supabase** (Postgres + RLS, no Supabase Auth — custom token system, transitioning to magic link)
+- **Vercel** (hosting, automatic deploys from `main`)
+- **Google Maps API** — travel time estimates on ideas (optional)
+- **Anthropic Claude** — admin bug-report fix suggestions (optional)
 
-## Local Development
+---
+
+## Local development
 
 ```bash
 npm install
@@ -37,13 +74,14 @@ Create a `.env.local` file:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+NEXT_PUBLIC_BASE_URL=http://localhost:3000          # used for OAuth callbacks; set to production URL in Vercel
 ADMIN_PIN=your_admin_pin
 SUPABASE_ACCESS_TOKEN=your_supabase_personal_access_token
-GOOGLE_MAPS_API_KEY=your_google_maps_key        # optional — enables travel time estimates
-ANTHROPIC_API_KEY=your_anthropic_key            # optional — enables Claude fix suggestions in admin
+GOOGLE_MAPS_API_KEY=your_google_maps_key            # optional — enables travel time estimates
+ANTHROPIC_API_KEY=your_anthropic_key                # optional — enables Claude fix suggestions in admin
 ```
 
-`SUPABASE_ACCESS_TOKEN` is a personal access token from [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens). It's used by the migration runner.
+`SUPABASE_ACCESS_TOKEN` is a personal access token from [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens). Used by the migration runner at build time.
 
 ### Database migrations
 
@@ -54,51 +92,84 @@ node scripts/migrate.mjs   # run manually
 npm run build              # runs migrations then builds
 ```
 
-Applied migrations are tracked in a `_migrations` table in Supabase. New files are picked up automatically on the next deploy.
+Applied migrations are tracked in a `_migrations` table. New files are picked up automatically on the next deploy. Never edit an already-applied migration — add a new numbered file instead.
+
+---
 
 ## Deployment
 
 Connected to Vercel via GitHub — every push to `main` triggers a production deploy. Migrations run automatically as part of the build step.
 
-To deploy manually:
-
 ```bash
-npx vercel --prod
+npx vercel --prod   # manual deploy
 ```
 
-## Project Structure
+---
+
+## Project structure
 
 ```
 app/
-  admin/          # Admin panel (PIN-protected)
-  api/            # Route handlers
-    admin/        # Admin data + approved names
-    auto-schedule/
-    availability/
-    bug-reports/
-    claude-fix/   # Claude AI fix suggestion endpoint
-    events/
-    ideas/
-    users/
-  availability/   # Availability grid page
-  bugs/           # Bug report form
-  events/         # Events + RSVP page
-  ideas/          # Ideas + voting page
+  admin/                  # PIN-protected admin panel
+  api/
+    admin/                # Admin data
+    auto-schedule/        # Auto-schedule endpoint (legacy global)
+    availability/         # Availability API (legacy global)
+    bug-reports/          # Bug report CRUD
+    claude-fix/           # Claude AI fix suggestion
+    events/               # Events + RSVP (legacy global)
+    google/               # Google Calendar OAuth (auth + callback)
+    ideas/                # Ideas + voting (legacy global)
+    og/                   # Dynamic OG image generation for plan links
+    places/autocomplete/  # Google Places autocomplete for idea locations
+    pods/                 # Pod CRUD, pod-scoped ideas and events
+    polls/                # Plan CRUD and availability responses
+    travel-time/          # Google Maps travel time lookup
+    users/                # User lookup / creation
+  availability/           # Legacy global availability page (being deprecated)
+  bugs/                   # Bug report form
+  calendar/               # Google Calendar page (being removed)
+  events/                 # Legacy global events page (being deprecated)
+  ideas/                  # Legacy global ideas page (being deprecated)
+  pods/                   # Pod list, pod detail, join, create
+  polls/                  # Plan create (/new) and respond (/[id])
+  profile/                # User profile page
+  layout.tsx
+  page.tsx                # Home / landing
 components/
   AvailabilityGrid.tsx
+  BottomNav.tsx           # Fixed bottom tab bar (mobile)
   CreateEventForm.tsx
   EventsList.tsx
   IdeasBoard.tsx
-  NameModal.tsx
+  NameModal.tsx           # Global name prompt (being replaced with inline prompt on plan pages)
   Nav.tsx
 context/
-  UserContext.tsx   # Token-based identity stored in localStorage
+  UserContext.tsx         # Token-based identity in localStorage (being replaced with cookies + magic link)
 lib/
-  password.ts       # scrypt hashing for optional account passwords
-  supabase.ts       # Lazy-initialized Supabase client
-migrations/         # Numbered SQL migration files
+  googleCalendar.ts       # Google Calendar API helpers
+  password.ts             # scrypt hashing for optional passwords
+  supabase.ts             # Lazy-initialized Supabase client
+migrations/               # Numbered SQL migration files (001–016)
 scripts/
-  migrate.mjs       # Migration runner (Supabase Management API or direct Postgres)
+  migrate.mjs             # Migration runner (Supabase Management API)
 types/
-  database.ts       # Supabase table types + extended query types
+  database.ts             # Supabase table types + extended query types
 ```
+
+---
+
+## What's being built now
+
+Active priorities (see [Linear](https://linear.app/hangout-friends) for the full board):
+
+1. **Unblock the anonymous plan flow** — remove the NameModal gate from plan pages so strangers can see the plan immediately (HGT-10)
+2. **Low-friction plan creation** — auto-fill dates, no account required, instant shareable link (HGT-8)
+3. **Save-as-you-go availability** — no submit button; slots persist on every tap (HGT-6)
+4. **Mobile grid polish** — fix fiddly drag-select, add tap-to-toggle mode, 44px tap targets (HGT-23/24/25)
+5. **Plan slugs** — migrate URLs from `/polls/[uuid]` to `/p/[slug]` (e.g. `dinner-saturday-x7k`) (HGT-35)
+6. **Deprecate legacy global surfaces** — remove `/availability`, `/ideas`, `/events` from nav (HGT-7)
+7. **PWA manifest** — `manifest.json` + icons for Add to Home Screen on iOS/Android (HGT-27)
+8. **Email magic link auth** — replace name+password localStorage token system (HGT-11/13)
+9. **Verify OG previews** — confirm rich link previews render in iMessage, WhatsApp, Discord, Slack (HGT-21)
+10. **Google Calendar pre-fill** — read-only busy times to pre-fill availability (HGT-29, blocked on HGT-34)
