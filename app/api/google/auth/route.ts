@@ -9,7 +9,13 @@ function createOAuthClient() {
   );
 }
 
-async function saveTokens(userId:string, tokens){
+async function saveTokens(userId: string, tokens: {
+  access_token?: string | null;
+  refresh_token?: string | null;
+  scope?: string;
+  token_type?: string | null;
+  expiry_date?: number | null;
+}) {
   await supabase
   .from('users')
   .update({
