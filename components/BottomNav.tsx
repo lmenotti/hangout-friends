@@ -17,34 +17,24 @@ const tabs = [
     ),
   },
   {
-    href: '/availability',
-    label: 'Schedule',
+    href: '/polls/new',
+    label: 'New Plan',
     icon: (active: boolean) => (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.25 : 1.75} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-        <rect x="3" y="4" width="18" height="18" rx="2" />
-        <path d="M16 2v4M8 2v4M3 10h18" />
-        <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v8M8 12h8" />
       </svg>
     ),
   },
   {
-    href: '/ideas',
-    label: 'Ideas',
+    href: '/pods',
+    label: 'Pods',
     icon: (active: boolean) => (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.25 : 1.75} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-        <path d="M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 01-1 1H9a1 1 0 01-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7z" />
-        <path d="M9 21h6M10 17h4" />
-      </svg>
-    ),
-  },
-  {
-    href: '/events',
-    label: 'Events',
-    icon: (active: boolean) => (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.25 : 1.75} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-        <rect x="3" y="4" width="18" height="18" rx="2" />
-        <path d="M16 2v4M8 2v4M3 10h18" />
-        <path d="M8 15l2.5 2.5L16 12" />
+        <circle cx="9" cy="7" r="3" />
+        <circle cx="17" cy="9" r="2.5" />
+        <path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6" />
+        <path d="M17 14c2.2.4 4 2 4 4" />
       </svg>
     ),
   },
@@ -55,17 +45,6 @@ const tabs = [
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.25 : 1.75} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
         <circle cx="12" cy="8" r="4" />
         <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-      </svg>
-    ),
-  },
-  {
-    href: '/calendar',
-    label: 'Calendar',
-    icon: (active: boolean) => (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.25 : 1.75} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-        <rect x="3" y="4" width="18" height="18" rx="2" />
-        <path d="M16 2v4M8 2v4M3 10h18" />
-        <circle cx="12" cy="15" r="2" />
       </svg>
     ),
   },
