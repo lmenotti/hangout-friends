@@ -26,27 +26,20 @@ export async function GET(req: NextRequest) {
         }}
       >
         {/* Grid pattern */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            flexWrap: 'wrap',
-            opacity: 0.06,
-          }}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <svg
+          style={{ position: 'absolute', inset: 0, opacity: 0.06 }}
+          width="1200"
+          height="630"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          {Array.from({ length: 840 }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: '40px',
-                height: '30px',
-                borderRight: '1px solid #ffffff',
-                borderBottom: '1px solid #ffffff',
-              }}
-            />
-          ))}
-        </div>
+          <defs>
+            <pattern id="grid" width="40" height="30" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 30" fill="none" stroke="white" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect width="1200" height="630" fill="url(#grid)" />
+        </svg>
 
         {/* Accent glow */}
         <div
