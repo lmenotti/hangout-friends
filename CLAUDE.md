@@ -11,6 +11,7 @@ Before doing any non-trivial work, read these in order:
 1. `GOALS.md` — strategy, why we're building this, kill criteria
 2. `PRODUCT.md` — what the app *should* be (v1 blueprint, design principles, what's explicitly out of scope)
 3. `README.md` — current implementation overview
+4. `docs/audits/PHASE_1_INVENTORY.md` and `docs/audits/PHASE_2_CATEGORIZATION.md` — prior audits of the codebase against the blueprint. Useful context, but verify against current state before treating as authoritative.
 
 If a request conflicts with PRODUCT.md, flag the conflict before proceeding. Don't silently override the blueprint.
 
