@@ -18,8 +18,6 @@ type AdminData = {
   bug_reports: BugReport[]
 }
 
-type ApprovedName = { id: string; name: string; created_at: string }
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
@@ -173,26 +171,19 @@ export default function AdminPage() {
   const [pin, setPin] = useState('')
   const [authed, setAuthed] = useState(false)
   const [data, setData] = useState<AdminData | null>(null)
-  const [approvedNames, setApprovedNames] = useState<ApprovedName[]>([])
-  const [newName, setNewName] = useState('')
-  const [addingName, setAddingName] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const fetchData = async (pinValue: string) => {
     setLoading(true)
     setError('')
-    const [adminRes, namesRes] = await Promise.all([
-      fetch('/api/admin', { headers: { 'x-admin-pin': pinValue } }),
-      fetch('/api/admin/approved-names', { headers: { 'x-admin-pin': pinValue } }),
-    ])
+    const adminRes = await fetch('/api/admin', { headers: { 'x-admin-pin': pinValue } })
     if (!adminRes.ok) {
       setError('Wrong PIN.')
       setLoading(false)
       return
     }
     setData(await adminRes.json())
-    setApprovedNames(namesRes.ok ? await namesRes.json() : [])
     setAuthed(true)
     setLoading(false)
   }
@@ -204,31 +195,6 @@ export default function AdminPage() {
       body: JSON.stringify({ type, id }),
     })
     fetchData(pin)
-  }
-
-  const handleAddName = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newName.trim()) return
-    setAddingName(true)
-    await fetch('/api/admin/approved-names', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin },
-      body: JSON.stringify({ name: newName.trim() }),
-    })
-    setNewName('')
-    setAddingName(false)
-    const res = await fetch('/api/admin/approved-names', { headers: { 'x-admin-pin': pin } })
-    if (res.ok) setApprovedNames(await res.json())
-  }
-
-  const handleRemoveName = async (id: string) => {
-    await fetch('/api/admin/approved-names', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin },
-      body: JSON.stringify({ id }),
-    })
-    const res = await fetch('/api/admin/approved-names', { headers: { 'x-admin-pin': pin } })
-    if (res.ok) setApprovedNames(await res.json())
   }
 
   if (!authed) {
@@ -275,32 +241,6 @@ export default function AdminPage() {
           Refresh
         </button>
       </div>
-
-      {/* Approved Names */}
-      <Section title="Approved Names">
-        <form onSubmit={handleAddName} className="flex gap-2 mb-2">
-          <input
-            type="text"
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            placeholder="Add a name…"
-            className="flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-          />
-          <button
-            type="submit"
-            disabled={addingName || !newName.trim()}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors"
-          >
-            Add
-          </button>
-        </form>
-        {approvedNames.length === 0 && (
-          <p className="text-xs text-zinc-600 px-4 py-3">No approved names yet. Add names to allow sign-in.</p>
-        )}
-        {approvedNames.map(n => (
-          <Row key={n.id} label={n.name} onDelete={() => handleRemoveName(n.id)} />
-        ))}
-      </Section>
 
       {/* Bug Reports */}
       <Section title={`Bug Reports${openBugs.length > 0 ? ` (${openBugs.length} open)` : ''}`}>

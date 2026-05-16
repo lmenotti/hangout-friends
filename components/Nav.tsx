@@ -5,12 +5,8 @@ import { usePathname } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
 
 const links = [
-  { href: '/availability', label: 'Availability' },
   { href: '/pods', label: 'Pods' },
-  { href: '/polls/new', label: 'Poll' },
-  { href: '/ideas', label: 'Ideas' },
-  { href: '/events', label: 'Events' },
-  { href: '/calendar', label: 'Calendar' },
+  { href: '/polls/new', label: 'New Plan' },
   { href: '/bugs', label: 'Report' },
 ]
 
