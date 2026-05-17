@@ -3,6 +3,23 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import type { User } from '@/types/database'
 
+const COOKIE_NAME = 'gs_token'
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
+
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'))
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+function setCookie(name: string, value: string) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`
+}
+
+function deleteCookie(name: string) {
+  document.cookie = `${name}=; path=/; max-age=0`
+}
+
 type UserContextType = {
   user: User | null
   token: string | null
@@ -35,7 +52,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (sessionStorage.getItem('guest') === '1') setGuestMode(true)
-    const storedToken = localStorage.getItem('gs_token')
+
+    // One-time migration: move token from localStorage to cookie
+    const lsToken = localStorage.getItem('gs_token')
+    if (lsToken) {
+      setCookie(COOKIE_NAME, lsToken)
+      localStorage.removeItem('gs_token')
+    }
+
+    const storedToken = getCookie(COOKIE_NAME)
     if (!storedToken) {
       setLoading(false)
       return
@@ -47,14 +72,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
           setUserState(data)
           setToken(storedToken)
         } else {
-          localStorage.removeItem('gs_token')
+          deleteCookie(COOKIE_NAME)
         }
       })
       .finally(() => setLoading(false))
   }, [])
 
   const setUser = (u: User, t: string) => {
-    localStorage.setItem('gs_token', t)
+    setCookie(COOKIE_NAME, t)
     setUserState(u)
     setToken(t)
   }
@@ -64,7 +89,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }
 
   const clearUser = () => {
-    localStorage.removeItem('gs_token')
+    deleteCookie(COOKIE_NAME)
     setUserState(null)
     setToken(null)
   }
