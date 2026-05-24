@@ -15,6 +15,7 @@ export default function PollPageClient({ id }: { id: string }) {
   const [name, setName] = useState('')
   const [mySlots, setMySlots] = useState<Set<string>>(new Set())
   const [editing, setEditing] = useState(false)
+  const [nameRequired, setNameRequired] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
@@ -51,6 +52,23 @@ export default function PollPageClient({ id }: { id: string }) {
       return next
     })
   }, [])
+
+  const handleGridTap = () => {
+    if (editing) return
+    if (name.trim()) {
+      setEditing(true)
+    } else {
+      setNameRequired(true)
+    }
+  }
+
+  const handleNameSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    localStorage.setItem('poll_name', name.trim())
+    setNameRequired(false)
+    setEditing(true)
+  }
 
   const handleSubmit = async () => {
     if (!name.trim()) { setError('Enter your name first.'); return }
@@ -117,42 +135,66 @@ export default function PollPageClient({ id }: { id: string }) {
         </button>
       </div>
 
-      <div className="flex gap-3 items-center">
-        <input
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Your name"
-          className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-48"
-        />
-        {!editing ? (
+      {/* Inline name prompt — appears on first grid tap if no name set */}
+      {nameRequired && (
+        <form onSubmit={handleNameSubmit} className="flex gap-3 items-center bg-zinc-900 border border-indigo-500/40 rounded-2xl px-4 py-3">
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Your name"
+            autoFocus
+            maxLength={40}
+            autoComplete="given-name"
+            className="flex-1 bg-transparent text-zinc-100 placeholder-zinc-500 focus:outline-none text-sm"
+          />
           <button
-            onClick={() => setEditing(true)}
-            className="px-4 py-2.5 text-sm font-medium rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors touch-manipulation"
+            type="submit"
+            disabled={!name.trim()}
+            className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors touch-manipulation"
           >
-            {responses.find(r => r.respondent_name.toLowerCase() === name.trim().toLowerCase()) ? 'Edit response' : 'Mark availability'}
+            Go
           </button>
-        ) : (
-          <>
-            <button
-              onClick={() => setEditing(false)}
-              className="px-3 py-2.5 text-sm rounded-xl bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors touch-manipulation"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="px-4 py-2.5 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors touch-manipulation"
-            >
-              {submitting ? 'Saving…' : submitted ? '✓ Saved' : 'Save'}
-            </button>
-          </>
-        )}
-      </div>
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-      {editing && <p className="text-xs text-zinc-500">Click or drag to mark when you&apos;re free.</p>}
+          <button
+            type="button"
+            onClick={() => setNameRequired(false)}
+            className="px-2 py-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors touch-manipulation"
+          >
+            Cancel
+          </button>
+        </form>
+      )}
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 overflow-x-auto">
+      {/* Editing controls — shown when actively marking */}
+      {editing && (
+        <div className="flex gap-3 items-center">
+          <span className="text-sm text-zinc-400 flex-1 truncate">
+            Marking as <span className="text-zinc-200 font-medium">{name}</span>
+          </span>
+          <button
+            onClick={() => setEditing(false)}
+            className="px-3 py-2.5 text-sm rounded-xl bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors touch-manipulation"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="px-4 py-2.5 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors touch-manipulation"
+          >
+            {submitting ? 'Saving…' : submitted ? '✓ Saved' : 'Save'}
+          </button>
+        </div>
+      )}
+
+      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {editing && <p className="text-xs text-zinc-500">Drag to mark when you&apos;re free.</p>}
+
+      <div
+        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 overflow-x-auto"
+        onClick={!editing ? handleGridTap : undefined}
+        style={!editing ? { cursor: 'pointer' } : undefined}
+      >
         <PollGrid
           dates={poll.date_options}
           mySlots={mySlots}
@@ -161,6 +203,13 @@ export default function PollPageClient({ id }: { id: string }) {
           editing={editing}
           onToggle={handleToggle}
         />
+        {!editing && (
+          <p className="text-center text-xs text-zinc-600 mt-3">
+            {responses.find(r => r.respondent_name.toLowerCase() === name.trim().toLowerCase())
+              ? 'Tap to edit your response'
+              : 'Tap to mark your availability'}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-zinc-500">

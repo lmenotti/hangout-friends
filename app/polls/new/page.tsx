@@ -15,11 +15,21 @@ function toISO(year: number, month: number, day: number) {
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
+function nextSevenDays(): Set<string> {
+  const dates = new Set<string>()
+  const today = new Date()
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today)
+    d.setDate(today.getDate() + i)
+    dates.add(d.toISOString().slice(0, 10))
+  }
+  return dates
+}
+
 export default function NewPollPage() {
   const router = useRouter()
   const [title, setTitle] = useState('')
-  const [creatorName, setCreatorName] = useState('')
-  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set())
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(nextSevenDays)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -50,10 +60,8 @@ export default function NewPollPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !creatorName.trim() || selectedDates.size === 0) {
-      setError('Fill in all fields and select at least one date.')
-      return
-    }
+    if (!title.trim()) { setError('Give your plan a title.'); return }
+    if (selectedDates.size === 0) { setError('Select at least one date.'); return }
     setSubmitting(true)
     setError('')
     try {
@@ -62,7 +70,6 @@ export default function NewPollPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title.trim(),
-          creator_name: creatorName.trim(),
           date_options: Array.from(selectedDates).sort(),
         }),
       })
@@ -78,30 +85,18 @@ export default function NewPollPage() {
   return (
     <div className="max-w-lg space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-zinc-100">New Availability Poll</h1>
-        <p className="text-sm text-zinc-500 mt-1">Share the link with anyone — no account needed to respond.</p>
+        <h1 className="text-xl font-semibold text-zinc-100">New plan</h1>
+        <p className="text-sm text-zinc-500 mt-1">Share the link — no account needed to respond.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-zinc-300">Poll title</label>
-          <input
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            placeholder="e.g. Weekend hangout?"
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-zinc-300">Your name</label>
-          <input
-            value={creatorName}
-            onChange={e => setCreatorName(e.target.value)}
-            placeholder="Your name"
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
-          />
-        </div>
+        <input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="What's the plan? e.g. Weekend hangout"
+          autoFocus
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
+        />
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-zinc-300">
@@ -182,7 +177,7 @@ export default function NewPollPage() {
           disabled={submitting}
           className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-medium py-3 rounded-xl transition-colors touch-manipulation"
         >
-          {submitting ? 'Creating…' : 'Create poll'}
+          {submitting ? 'Creating…' : 'Get link'}
         </button>
       </form>
     </div>

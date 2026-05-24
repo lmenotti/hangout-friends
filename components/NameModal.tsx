@@ -17,8 +17,8 @@ export default function NameModal() {
   const [error, setError] = useState('')
   const checkDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  // Admin page has its own PIN auth — don't force sign-in there
-  if (loading || user || guestMode || pathname === '/admin') return null
+  // Admin has its own PIN auth; poll response pages are anonymous-first
+  if (loading || user || guestMode || pathname === '/admin' || pathname.startsWith('/polls/')) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
