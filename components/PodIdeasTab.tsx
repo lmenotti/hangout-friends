@@ -90,7 +90,7 @@ export default function PodIdeasTab({ podId, token, userId, role }: Props) {
             <button
               key={s}
               onClick={() => setSort(s)}
-              className={`px-3 py-1.5 text-xs rounded-lg transition-colors touch-manipulation ${sort === s ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'}`}
+              className={`px-3 py-2.5 min-h-[44px] text-xs rounded-lg transition-colors touch-manipulation ${sort === s ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'}`}
             >
               {sortLabels[s]}
             </button>
@@ -98,7 +98,7 @@ export default function PodIdeasTab({ podId, token, userId, role }: Props) {
         </div>
         <button
           onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors touch-manipulation"
+          className="flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] text-xs font-medium rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors touch-manipulation"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
             <path d="M12 5v14M5 12h14" />
@@ -173,7 +173,7 @@ export default function PodIdeasTab({ podId, token, userId, role }: Props) {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleVote(idea)}
-                    className={`flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg transition-colors touch-manipulation ${
+                    className={`flex items-center gap-1 px-2.5 py-2.5 min-h-[44px] text-xs rounded-lg transition-colors touch-manipulation ${
                       idea.user_voted ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
@@ -188,7 +188,7 @@ export default function PodIdeasTab({ podId, token, userId, role }: Props) {
                 {idea.status === 'open' && (role === 'owner' || idea.vote_count >= 3) && (
                   <button
                     onClick={() => setScheduleIdea(idea)}
-                    className="px-2.5 py-1 text-xs rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors touch-manipulation"
+                    className="px-2.5 py-2.5 min-h-[44px] text-xs rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors touch-manipulation"
                   >
                     Schedule it
                   </button>

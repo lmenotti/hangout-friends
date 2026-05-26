@@ -100,7 +100,7 @@ export default function EventPageClient({ podId, eventId }: { podId: string; eve
               <button
                 onClick={() => handleRsvp('yes')}
                 disabled={rsvping}
-                className={`px-5 py-2 text-sm font-medium rounded-xl transition-colors touch-manipulation ${
+                className={`px-5 py-2 min-h-[44px] text-sm font-medium rounded-xl transition-colors touch-manipulation ${
                   myRsvp?.status === 'yes'
                     ? 'bg-teal-600 text-white'
                     : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
@@ -111,7 +111,7 @@ export default function EventPageClient({ podId, eventId }: { podId: string; eve
               <button
                 onClick={() => handleRsvp('no')}
                 disabled={rsvping}
-                className={`px-5 py-2 text-sm font-medium rounded-xl transition-colors touch-manipulation ${
+                className={`px-5 py-2 min-h-[44px] text-sm font-medium rounded-xl transition-colors touch-manipulation ${
                   myRsvp?.status === 'no'
                     ? 'bg-red-800 text-white'
                     : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'

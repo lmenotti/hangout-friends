@@ -16,6 +16,7 @@ export default function PollPageClient({ id }: { id: string }) {
   const [mySlots, setMySlots] = useState<Set<string>>(new Set())
   const [editing, setEditing] = useState(false)
   const [nameRequired, setNameRequired] = useState(false)
+  const [tapMode, setTapMode] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
@@ -33,6 +34,7 @@ export default function PollPageClient({ id }: { id: string }) {
     fetchPoll().finally(() => setLoading(false))
     const stored = localStorage.getItem('poll_name')
     if (stored) setName(stored)
+    if (localStorage.getItem('poll_tap_mode') === '1') setTapMode(true)
   }, [fetchPoll])
 
   useEffect(() => {
@@ -146,7 +148,7 @@ export default function PollPageClient({ id }: { id: string }) {
             autoFocus
             maxLength={40}
             autoComplete="given-name"
-            className="flex-1 bg-transparent text-zinc-100 placeholder-zinc-500 focus:outline-none text-sm"
+            className="flex-1 bg-transparent text-zinc-100 placeholder-zinc-500 focus:outline-none text-base"
           />
           <button
             type="submit"
@@ -188,7 +190,29 @@ export default function PollPageClient({ id }: { id: string }) {
       )}
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
-      {editing && <p className="text-xs text-zinc-500">Drag to mark when you&apos;re free.</p>}
+      {editing && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-zinc-500">
+            {tapMode ? 'Tap cells to toggle.' : 'Drag to mark when you\'re free.'}
+          </p>
+          <div className="flex rounded-lg overflow-hidden border border-zinc-700 text-xs font-medium shrink-0">
+            <button
+              type="button"
+              onClick={() => { setTapMode(false); localStorage.setItem('poll_tap_mode', '0') }}
+              className={`px-3 py-2.5 min-h-[44px] transition-colors touch-manipulation ${!tapMode ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              Drag
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTapMode(true); localStorage.setItem('poll_tap_mode', '1') }}
+              className={`px-3 py-2.5 min-h-[44px] transition-colors touch-manipulation ${tapMode ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              Tap
+            </button>
+          </div>
+        </div>
+      )}
 
       <div
         className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 overflow-x-auto"
@@ -202,6 +226,7 @@ export default function PollPageClient({ id }: { id: string }) {
           totalResponders={responses.length}
           editing={editing}
           onToggle={handleToggle}
+          tapMode={tapMode}
         />
         {!editing && (
           <p className="text-center text-xs text-zinc-600 mt-3">

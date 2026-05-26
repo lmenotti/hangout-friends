@@ -75,7 +75,7 @@ export default function NewPollPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      router.push(`/polls/${data.id}`)
+      router.push(`/p/${data.slug}`)
     } catch (err: any) {
       setError(err.message)
       setSubmitting(false)
@@ -95,7 +95,7 @@ export default function NewPollPage() {
           onChange={e => setTitle(e.target.value)}
           placeholder="What's the plan? e.g. Weekend hangout"
           autoFocus
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-base"
         />
 
         <div className="space-y-2">

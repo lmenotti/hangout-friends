@@ -45,28 +45,29 @@ type Props = {
   totalResponders: number
   editing: boolean
   onToggle: (key: string, adding: boolean) => void
+  tapMode?: boolean
 }
 
-export default function PollGrid({ dates, mySlots, aggregate, totalResponders, editing, onToggle }: Props) {
+export default function PollGrid({ dates, mySlots, aggregate, totalResponders, editing, onToggle, tapMode = false }: Props) {
   const paintingRef = useRef<boolean | null>(null)
   const touchActiveRef = useRef(false)
 
   const stopPaint = () => { paintingRef.current = null }
 
   const onMouseDown = (key: string) => {
-    if (!editing) return
+    if (!editing || tapMode) return
     const adding = !mySlots.has(key)
     paintingRef.current = adding
     onToggle(key, adding)
   }
 
   const onMouseEnter = (key: string) => {
-    if (paintingRef.current === null || !editing) return
+    if (paintingRef.current === null || !editing || tapMode) return
     onToggle(key, paintingRef.current)
   }
 
   const onTouchStart = (e: React.TouchEvent) => {
-    if (!editing) return
+    if (!editing || tapMode) return
     e.preventDefault()
     touchActiveRef.current = true
     const touch = e.touches[0]
@@ -79,7 +80,7 @@ export default function PollGrid({ dates, mySlots, aggregate, totalResponders, e
   }
 
   const onTouchMove = (e: React.TouchEvent) => {
-    if (paintingRef.current === null || !editing) return
+    if (paintingRef.current === null || !editing || tapMode) return
     e.preventDefault()
     const touch = e.touches[0]
     const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null
@@ -97,12 +98,12 @@ export default function PollGrid({ dates, mySlots, aggregate, totalResponders, e
   return (
     <div
       className="select-none overflow-x-auto"
-      style={{ touchAction: editing ? 'none' : 'auto' }}
-      onMouseUp={stopPaint}
-      onMouseLeave={stopPaint}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
+      style={{ touchAction: editing && !tapMode ? 'none' : 'auto' }}
+      onMouseUp={tapMode ? undefined : stopPaint}
+      onMouseLeave={tapMode ? undefined : stopPaint}
+      onTouchStart={tapMode ? undefined : onTouchStart}
+      onTouchMove={tapMode ? undefined : onTouchMove}
+      onTouchEnd={tapMode ? undefined : onTouchEnd}
     >
       {/* Header row */}
       <div className="grid mb-1" style={{ gridTemplateColumns: `40px repeat(${colCount}, 1fr)` }}>
@@ -144,8 +145,9 @@ export default function PollGrid({ dates, mySlots, aggregate, totalResponders, e
                 key={key}
                 data-cell={key}
                 className={`mx-px h-5 rounded-sm transition-colors duration-75 ${cellClass} ${editing ? 'cursor-pointer' : ''}`}
-                onMouseDown={() => onMouseDown(key)}
-                onMouseEnter={() => onMouseEnter(key)}
+                onMouseDown={tapMode ? undefined : () => onMouseDown(key)}
+                onMouseEnter={tapMode ? undefined : () => onMouseEnter(key)}
+                onClick={tapMode && editing ? () => onToggle(key, !mySlots.has(key)) : undefined}
               >
                 {count > 0 && !editing && (
                   <span className="text-[9px] text-white/80 float-right pr-0.5 leading-5">{count}</span>
