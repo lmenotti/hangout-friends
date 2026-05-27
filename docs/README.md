@@ -94,6 +94,8 @@ npm run build              # runs migrations then builds
 
 Applied migrations are tracked in a `_migrations` table. New files are picked up automatically on the next deploy. Never edit an already-applied migration — add a new numbered file instead.
 
+`_migrations` has RLS enabled with no policies, which locks it to deny-all for every PostgREST client role. The migration runner connects via a direct Postgres connection (service role), so it bypasses RLS and is unaffected.
+
 ---
 
 ## Deployment
