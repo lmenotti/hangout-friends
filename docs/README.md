@@ -213,27 +213,40 @@ types/
 
 ## What's being built now
 
-Active priorities (synced with [Linear](https://linear.app/hangout-friends) May 28, 2026):
+Active priorities (synced with [Linear](https://linear.app/hangout-friends) after commit `284cb7a`, May 28 2026):
 
-**Sprint 0 — unblock the sacred link flow (do first):**
+### Shipped this session (Done)
 
-1. **HGT-10** (Urgent, In Progress) — Fix NameModal still blocking `/p/[slug]` share links (fix only applied to `/polls/*` so far)
-2. **HGT-44** (High, Todo) — Hide BottomNav on plan respond pages
-3. **HGT-6** (High, In Progress) — Save-as-you-go availability; no explicit Save button
-4. **HGT-23/24/25** (High, In Review) — Mobile grid polish: 44px cells, tap-to-toggle default
-5. **HGT-17** (Urgent, Todo) — Run 5-friend mobile Safari teardown test (after HGT-10)
-6. **HGT-21** (High, Backlog) — Verify OG previews in iMessage, WhatsApp, Discord, Slack
+| Issue | What landed |
+|-------|-------------|
+| **HGT-10** | NameModal skipped on `/p/*` and `/polls/*` plan pages |
+| **HGT-44** | BottomNav + top Nav hidden on plan respond pages |
+| **HGT-6** | Save-as-you-go availability (no explicit Save button) |
+| **HGT-23/24/25** | 44px grid cells, tap-to-toggle default on mobile |
+| **HGT-35** | Slug URLs at `/p/[slug]`, UUID redirect, AASA `/p/*` |
+| **HGT-7** | Plans-first home dashboard; legacy surfaces off nav |
+| **HGT-8**, **HGT-26** | Plan creation + BottomNav tabs (prior work) |
 
-**Sprint 1 — close the plan lifecycle:**
+### In Review — MVP shipped, needs QA / polish
 
-7. **HGT-18 → HGT-19 → HGT-20** — Plan-scoped ideas, auto-schedule, RSVP (all Backlog)
-8. **HGT-35** (In Progress) — Finish slug migration: UUID→slug redirect, AASA `/p/*` paths
-9. **HGT-7** (In Progress) — Finish legacy deprecation: remove old links from home dashboard
+| Issue | Status |
+|-------|--------|
+| **HGT-18** | Plan-scoped ideas + voting (migration 021, API, `PollIdeasBoard`) |
+| **HGT-19** | Auto-schedule + lock to `scheduled` state |
+| **HGT-20** | RSVP yes/maybe/no — API works; **UI polish open** (name lists, self-feedback, one-step flow, "who's coming") |
 
-**Done / deferred:**
+Dev verification: `npm run verify:021` · `npm run test:plan-loop`
 
-- **HGT-8** — Low-friction plan creation (**Done**)
-- **HGT-26** — BottomNav tab cleanup (**Done**)
-- **HGT-27/28** — PWA + push notifications (after M1 validation)
-- **HGT-11/13/15** — Auth + cookie identity (after M1)
-- **HGT-29/34** — Google Calendar (rewrite; defer until build order step 7)
+### Next up (active backlog)
+
+1. **HGT-17** (Urgent) — 5-friend mobile Safari teardown test (Sprint 0 exit criteria; unblocked)
+2. **HGT-20 polish** — close RSVP visibility gaps from QA (see Linear comment on HGT-20)
+3. **HGT-21** — Verify OG previews in iMessage, WhatsApp, Discord, Slack
+
+### Deferred (post-M1)
+
+- **HGT-27/28** — PWA + push notifications
+- **HGT-11/13/15** — Auth + cookie identity
+- **HGT-29/34** — Google Calendar rewrite
+- **HGT-22** — Auto-scheduler: show top 3 candidates instead of silent pick
+- **PRODUCT.md §3** — Tap heatmap cell → see who's free (not yet ticketed)
