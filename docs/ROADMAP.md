@@ -38,10 +38,15 @@ Current behavior is very naive (picks the single slot with most voter overlap). 
 - **Weather warning** — flag if an outdoor event is scheduled on a day with rain/snow in the forecast
 - Likely API: Open-Meteo (free, no key needed) or OpenWeatherMap
 
-### Built-in Calender
-- **Calendar integration** Needed if google calendar integration is wanted for displaying visibility without the user needing to fill in parts their calendar already says
-- **Reduced redundancy** Allows for the user to change availability for future references instead of needing to change it multiple times after day has passed
-- Libraries to use: React has a already built library for calendars which will just require implementing it, it also uses formats that other calendars use, so importing and exporting is easier
+### Google Calendar (account holders)
+
+**Done (May 2026):** OAuth connect on Profile (`/api/google/auth`, `/api/google/callback`); tokens in `users.google_*`; localhost verified. Details: [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md).
+
+**Next (HGT-29):** Import busy blocks to pre-fill availability on plans — wire `listBusyTimes` from `lib/googleCalendar.ts` via `GET /api/calendar/sync?timeMin&timeMax` into the plan respond grid.
+
+**Deferred QA:** Production connect, token refresh, calendar read smoke test — checklist in GOOGLE_CALENDAR.md.
+
+**Not planned here:** `/calendar` destination page (PRODUCT: sync is a background utility, not a calendar app).
 
 ---
 
@@ -54,8 +59,8 @@ Current behavior is very naive (picks the single slot with most voter overlap). 
 - Push notifications via Web Push API (works on Android; limited on iOS until iOS 16.4+)
 
 ### Calendar integration
-- **Export to calendar** — `.ics` file download or "Add to Google Calendar" link on each event
-- **Import availability from Google Calendar** — parse busy blocks and pre-fill the availability grid (OAuth required)
+- **Export to calendar** — `.ics` file download or "Add to Google Calendar" link on each plan/event (PRODUCT build step 8; after pre-fill)
+- **Import availability from Google Calendar** — parse busy blocks and pre-fill the availability grid (**OAuth done**; UI/API integration remaining — HGT-29)
 
 ### Event improvements
 - **Recurring events** — weekly/monthly game nights, etc.

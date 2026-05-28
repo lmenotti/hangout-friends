@@ -32,10 +32,10 @@ export async function POST(req: NextRequest) {
       .from('users')
       .update({ token: newToken })
       .eq('id', existing.id)
-      .select()
+      .select('id, name, token, created_at, home_location, google_refresh_token')
       .single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json(data)
+    return NextResponse.json(sanitizeUserResponse(data))
   }
 
   // First sign-in: create account
@@ -45,11 +45,21 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('users')
     .insert({ name: trimmedName, token: newToken, password_hash, home_location: trimmedHome })
-    .select()
+    .select('id, name, token, created_at, home_location, google_refresh_token')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json(sanitizeUserResponse(data))
+}
+
+function sanitizeUserResponse(
+  data: { id: string; name: string; token: string; created_at: string; home_location: string | null; google_refresh_token?: string | null }
+) {
+  const { google_refresh_token, ...user } = data
+  return {
+    ...user,
+    google_calendar_connected: !!google_refresh_token,
+  }
 }
 
 export async function PATCH(req: NextRequest) {
@@ -63,11 +73,11 @@ export async function PATCH(req: NextRequest) {
     .from('users')
     .update({ home_location: trimmedHome })
     .eq('token', token)
-    .select()
+    .select('id, name, token, created_at, home_location, google_refresh_token')
     .single()
 
   if (error || !data) return NextResponse.json({ error: error?.message ?? 'Not found' }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json(sanitizeUserResponse(data))
 }
 
 export async function GET(req: NextRequest) {
@@ -76,10 +86,10 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('users')
-    .select()
+    .select('id, name, token, created_at, home_location, google_refresh_token')
     .eq('token', token)
     .single()
 
   if (error || !data) return NextResponse.json({ error: 'User not found' }, { status: 404 })
-  return NextResponse.json(data)
+  return NextResponse.json(sanitizeUserResponse(data))
 }

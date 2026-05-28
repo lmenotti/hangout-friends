@@ -96,7 +96,7 @@ ADMIN_PIN=your_admin_pin
 SUPABASE_ACCESS_TOKEN=your_supabase_personal_access_token
 GOOGLE_MAPS_API_KEY=your_google_maps_key            # optional — enables travel time estimates
 ANTHROPIC_API_KEY=your_anthropic_key                # optional — enables Claude fix suggestions in admin
-GOOGLE_CLIENT_ID=your_google_oauth_client_id        # Google Calendar OAuth (local dev only; see below)
+GOOGLE_CLIENT_ID=your_google_oauth_client_id        # Google Calendar OAuth (see docs/GOOGLE_CALENDAR.md)
 GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 VAPID_PUBLIC_KEY=your_vapid_public_key              # Web Push (server)
 VAPID_PRIVATE_KEY=your_vapid_private_key            # Web Push (server — never NEXT_PUBLIC_)
@@ -119,32 +119,28 @@ npx web-push generate-vapid-keys
 
 ### Google Calendar OAuth
 
-OAuth routes are implemented. Preview deploys still omit Google credentials (see policy below).
+OAuth routes and `/api/calendar/sync` are implemented in `lib/googleCalendar.ts`. Connect/disconnect on `/profile`. Preview deploys omit Google credentials (policy below). Deferred QA: **[docs/GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md)**.
 
 | Item | Value |
 |------|--------|
-| Auth start | `GET /api/google/auth` |
+| Connect UI | `/profile` → Connect / Disconnect |
+| Auth start | `GET /api/google/auth` (requires signed-in `gs_token` cookie) |
 | OAuth callback | `GET /api/google/callback` |
 | Redirect URI (prod) | `https://hangout-friends.vercel.app/api/google/callback` |
 | Redirect URI (local) | `http://localhost:3000/api/google/callback` |
 | JavaScript origins | `https://hangout-friends.vercel.app`, `http://localhost:3000` |
 
-**Environments:** OAuth is enabled for **production + localhost only**. Vercel **Preview** deploys do not get Google OAuth — no preview URLs in the GCP client, and `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` are not required for Preview. Calendar connect will 404 or no-op on preview until we explicitly expand coverage.
+**Environments:** OAuth is enabled for **production + localhost only**. Vercel **Preview** deploys do not use Google OAuth (no preview redirect URIs in GCP).
 
 **Where to store keys**
 
-| Variable | `.env.local` | Vercel Production | Vercel Preview |
-|----------|--------------|-------------------|----------------|
-| `GOOGLE_CLIENT_ID` | yes | yes (Sensitive) | omit |
-| `GOOGLE_CLIENT_SECRET` | yes | yes (Sensitive) | omit |
-| `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` | `https://hangout-friends.vercel.app` | optional; previews don't use OAuth |
+| Variable | `.env.local` / `vercel env pull` | Vercel Production | Vercel Preview |
+|----------|----------------------------------|-------------------|----------------|
+| `GOOGLE_CLIENT_ID` | yes (Development env) | yes (Sensitive) | optional; unused |
+| `GOOGLE_CLIENT_SECRET` | yes (Development env) | yes (Sensitive) | optional; unused |
+| `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` | `https://hangout-friends.vercel.app` | optional |
 
-**GCP checklist (external Web client)**
-
-1. OAuth consent screen — app name, support email, scopes (e.g. `calendar.readonly`).
-2. Enable **Google Calendar API** on the project.
-3. Create OAuth client → register redirect URIs and JS origins exactly as in the table above.
-4. While app is in **Testing**, add test users on the consent screen; only they can authorize until publish/verification.
+**GCP setup (completed May 2026):** external Web client, consent screen, Calendar API enabled, test users, redirect URIs + JS origins as above.
 
 **When to change the OAuth environment policy**
 
@@ -197,7 +193,8 @@ app/
     bug-reports/          # Bug report CRUD
     claude-fix/           # Claude AI fix suggestion
     events/               # Events + RSVP (legacy global)
-    google/               # Google Calendar OAuth: auth + callback (planned: /api/google/auth, /api/google/callback)
+    calendar/sync/        # Google Calendar connection status, busy times, disconnect
+    google/               # Google Calendar OAuth (auth + callback)
     ideas/                # Ideas + voting (legacy global)
     og/                   # Dynamic OG image generation for plan links
     places/autocomplete/  # Google Places autocomplete for idea locations
@@ -207,7 +204,6 @@ app/
     users/                # User lookup / creation
   availability/           # Legacy global availability page (being deprecated)
   bugs/                   # Bug report form
-  calendar/               # Google Calendar page (being removed)
   events/                 # Legacy global events page (being deprecated)
   ideas/                  # Legacy global ideas page (being deprecated)
   pods/                   # Pod list, pod detail, join, create
@@ -226,7 +222,7 @@ components/
 context/
   UserContext.tsx         # Token-based identity in localStorage (being replaced with cookies + magic link)
 lib/
-  googleCalendar.ts       # Google Calendar API helpers
+  googleCalendar.ts       # Google OAuth helpers, token storage, listBusyTimes (freebusy)
   password.ts             # scrypt hashing for optional passwords
   supabase.ts             # Lazy-initialized Supabase client
 migrations/               # Numbered SQL migration files (001–016)
@@ -252,7 +248,8 @@ Synced with [Linear](https://linear.app/hangout-friends). Code for Waves 0–3 i
 | **HGT-27** | PWA manifest, icons, install prompt |
 | **HGT-15** | Per-plan cookie identity on respond + RSVP |
 | **Plan expiration** | migration 022, daily cron archives expired plans |
-| **HGT-29/34** | Google Calendar OAuth rewrite — **prod OAuth test deferred** |
+| **HGT-30** | ICS export on scheduled plans (`/api/polls/[id]/ics`) |
+| **HGT-29/34** | Google Calendar OAuth + `/api/calendar/sync` — **prod OAuth test deferred** |
 | **HGT-28** | Push subscriptions, service worker, 3 allowlisted types; permission prompt shipped (`PushNotificationPrompt`) — **real-device push test deferred** |
 
 Dev verification: `npm run verify:021` · `npm run test:plan-loop` · `npm run build`
@@ -262,10 +259,10 @@ Dev verification: `npm run verify:021` · `npm run test:plan-loop` · `npm run b
 1. **HGT-17** — 5-friend mobile Safari teardown (Sprint 0 exit criteria)
 2. **HGT-21** — OG previews in iMessage, WhatsApp, Discord, Slack
 3. **HGT-27/28** — PWA install + end-to-end push on real devices (permission prompt exists; verify subscribe + delivery)
-4. **HGT-29/34** — Google OAuth smoke test on production
+4. **HGT-29/34** — Google OAuth smoke test on production — [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md)
 
 ### Deferred — Wave 4 (optional)
 
 - **HGT-11/13** — Email + magic link auth
 - **HGT-22** — Auto-scheduler top-3 candidate picker
-- **ICS export** — one-shot “Add to calendar” on scheduled plans (create Linear issue if missing)
+- **HGT-29 pre-fill** — wire `listBusyTimes` into plan availability grid (OAuth connect shipped)

@@ -5,6 +5,16 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
 import PlacesInput from '@/components/PlacesInput'
+import type { UserPublic } from '@/types/database'
+
+const CALENDAR_MESSAGES: Record<string, { text: string; tone: 'ok' | 'err' }> = {
+  connected: { text: 'Google Calendar connected.', tone: 'ok' },
+  denied: { text: 'Google Calendar connection was cancelled.', tone: 'err' },
+  error: { text: 'Could not connect Google Calendar. Try again.', tone: 'err' },
+  unavailable: { text: 'Google Calendar is not available in this environment.', tone: 'err' },
+  'sign-in-required': { text: 'Sign in before connecting Google Calendar.', tone: 'err' },
+  signin: { text: 'Sign in first, then connect Google Calendar.', tone: 'err' },
+}
 
 export default function ProfilePage() {
   const { user, token, updateUser, clearUser } = useUser()
@@ -13,43 +23,26 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
-  const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null)
   const [calendarLoading, setCalendarLoading] = useState(false)
-  const [calendarMessage, setCalendarMessage] = useState('')
+  const [calendarMessage, setCalendarMessage] = useState<{ text: string; tone: 'ok' | 'err' } | null>(null)
 
   useEffect(() => {
-    if (!token) return
-
-    fetch('/api/calendar/sync', { headers: { 'x-user-token': token } })
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => {
-        if (data && typeof data.connected === 'boolean') {
-          setCalendarConnected(data.connected)
-        }
-      })
-      .catch(() => setCalendarConnected(false))
-  }, [token])
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const status = params.get('calendar')
+    const status = new URLSearchParams(window.location.search).get('calendar')
     if (!status) return
 
-    const messages: Record<string, string> = {
-      connected: 'Google Calendar connected.',
-      denied: 'Google Calendar connection was cancelled.',
-      error: 'Could not connect Google Calendar. Try again.',
-      unavailable: 'Google Calendar is not available in this environment.',
-      'sign-in-required': 'Sign in before connecting Google Calendar.',
-    }
+    const msg = CALENDAR_MESSAGES[status]
+    if (msg) setCalendarMessage(msg)
 
-    if (messages[status]) {
-      setCalendarMessage(messages[status])
-      if (status === 'connected') setCalendarConnected(true)
+    if (status === 'connected' && token) {
+      fetch('/api/users', { headers: { 'x-user-token': token } })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: UserPublic | null) => {
+          if (data && !('error' in data)) updateUser(data)
+        })
     }
 
     router.replace('/profile')
-  }, [router])
+  }, [token, updateUser, router])
 
   if (!user) {
     return (
@@ -93,7 +86,7 @@ export default function ProfilePage() {
   const handleDisconnectCalendar = async () => {
     if (!token) return
     setCalendarLoading(true)
-    setCalendarMessage('')
+    setCalendarMessage(null)
     try {
       const res = await fetch('/api/calendar/sync', {
         method: 'DELETE',
@@ -101,10 +94,15 @@ export default function ProfilePage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Disconnect failed')
-      setCalendarConnected(false)
-      setCalendarMessage('Google Calendar disconnected.')
+      const userRes = await fetch('/api/users', { headers: { 'x-user-token': token } })
+      const userData: UserPublic | { error: string } = await userRes.json()
+      if (userRes.ok && userData && !('error' in userData)) updateUser(userData)
+      setCalendarMessage({ text: 'Google Calendar disconnected.', tone: 'ok' })
     } catch (err: unknown) {
-      setCalendarMessage(err instanceof Error ? err.message : 'Disconnect failed')
+      setCalendarMessage({
+        text: err instanceof Error ? err.message : 'Disconnect failed',
+        tone: 'err',
+      })
     } finally {
       setCalendarLoading(false)
     }
@@ -157,19 +155,17 @@ export default function ProfilePage() {
             </p>
           </div>
           {calendarMessage && (
-            <p className={`text-xs ${calendarMessage.includes('Could not') || calendarMessage.includes('cancelled') || calendarMessage.includes('not available') ? 'text-amber-400' : 'text-emerald-400'}`}>
-              {calendarMessage}
+            <p
+              className={`text-xs ${calendarMessage.tone === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}
+            >
+              {calendarMessage.text}
             </p>
           )}
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-zinc-300">
-              {calendarConnected === null
-                ? 'Checking connection…'
-                : calendarConnected
-                  ? 'Connected'
-                  : 'Not connected'}
+              {user.google_calendar_connected ? 'Connected' : 'Not connected'}
             </p>
-            {calendarConnected === null ? null : calendarConnected ? (
+            {user.google_calendar_connected ? (
               <button
                 onClick={handleDisconnectCalendar}
                 disabled={calendarLoading}

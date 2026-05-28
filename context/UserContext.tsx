@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import type { User } from '@/types/database'
+import type { UserPublic } from '@/types/database'
 
 const COOKIE_NAME = 'gs_token'
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
@@ -21,12 +21,12 @@ function deleteCookie(name: string) {
 }
 
 type UserContextType = {
-  user: User | null
+  user: UserPublic | null
   token: string | null
   loading: boolean
   guestMode: boolean
-  setUser: (user: User, token: string) => void
-  updateUser: (user: User) => void
+  setUser: (user: UserPublic, token: string) => void
+  updateUser: (user: UserPublic) => void
   clearUser: () => void
   browseAsGuest: () => void
   showSignIn: () => void
@@ -45,7 +45,7 @@ const UserContext = createContext<UserContextType>({
 })
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [user, setUserState] = useState<User | null>(null)
+  const [user, setUserState] = useState<UserPublic | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [guestMode, setGuestMode] = useState(false)
@@ -78,13 +78,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false))
   }, [])
 
-  const setUser = (u: User, t: string) => {
+  const setUser = (u: UserPublic, t: string) => {
     setCookie(COOKIE_NAME, t)
     setUserState(u)
     setToken(t)
   }
 
-  const updateUser = (u: User) => {
+  const updateUser = (u: UserPublic) => {
     setUserState(u)
   }
 

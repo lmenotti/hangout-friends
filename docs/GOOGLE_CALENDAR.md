@@ -1,0 +1,74 @@
+# Google Calendar integration — status & testing
+
+Last updated: May 2026. Source of truth for OAuth implementation and deferred QA.
+
+See also: [README.md](./README.md) (env vars, GCP setup), [PRODUCT.md](./PRODUCT.md) §11 (product intent).
+
+---
+
+## Linear issues (recommended board updates)
+
+Update manually in [Linear](https://linear.app/hangout-friends) (or `node scripts/linear-sync-status.mjs` if `LINEAR_API_KEY` is set):
+
+| Issue | Suggested status | Notes |
+|-------|------------------|-------|
+| **HGT-34** | **Done** / In Review | OAuth + token storage + Profile connect/disconnect shipped on `main`. Localhost verified. Production smoke test deferred. |
+| **HGT-29** | **Todo** / In Progress | `listBusyTimes` + `GET /api/calendar/sync?timeMin&timeMax` exist; plan grid pre-fill **not wired** in UI. |
+| **HGT-30** | **Done** | ICS export — `/api/polls/[id]/ics` (cloud agent, merged to `main`). |
+
+---
+
+## What is implemented (on `main`)
+
+| Piece | Location |
+|-------|----------|
+| OAuth helpers + Calendar read | `lib/googleCalendar.ts` (`encodeOAuthState`, `listBusyTimes`, `isGoogleCalendarConnected`, …) |
+| Auth redirect | `GET /api/google/auth` — `gs_token` cookie |
+| Callback | `GET /api/google/callback` — stores `users.google_*` (migration `012`) |
+| Sync API | `GET/DELETE /api/calendar/sync` — connection status, busy intervals, disconnect |
+| Profile UI | `/profile` — connect, disconnect, OAuth redirect messages |
+| User API | `GET/POST/PATCH /api/users` — `google_calendar_connected` flag; tokens never returned |
+
+**Scope:** `calendar.readonly`  
+**Policy:** OAuth on **production + localhost** only (not Vercel Preview). See README.
+
+### Verified (localhost)
+
+- [x] Connect flow end-to-end
+- [x] Profile shows Connected
+- [x] Tokens in Supabase
+
+### Not implemented / deferred
+
+- [ ] Production OAuth smoke test
+- [ ] Pre-fill plan availability grid from busy blocks (HGT-29)
+- [ ] 1h cache per PRODUCT.md
+
+---
+
+## Deferred testing checklist
+
+### Production OAuth
+
+- [ ] Redeploy after env vars
+- [ ] Sign in on production → Profile → Connect (GCP test user)
+- [ ] `calendar=connected` redirect; Connected UI; tokens in DB
+
+### Sync API
+
+- [ ] `GET /api/calendar/sync` with `x-user-token` → `{ connected: true/false }`
+- [ ] `GET /api/calendar/sync?timeMin=…&timeMax=…` → `{ busy: [...] }` for connected user
+- [ ] `DELETE /api/calendar/sync` → disconnect; Profile shows Not connected
+
+### HGT-29 (when built)
+
+- [ ] Plan respond flow fetches busy blocks and marks grid
+- [ ] Anonymous responders unchanged (no Google required)
+
+---
+
+## Historical note
+
+Nov 2025 audits (`docs/audits/051126_*.md`) describe OAuth as missing — stale. See [audits/README.md](./audits/README.md).
+
+**May 28, 2026:** A local stash on one machine had an alternate OAuth split (`lib/googleOAuth.ts` + `listGoogleEvents`); that was **not** merged. **`main` uses monolithic `lib/googleCalendar.ts`** (OAuth + `listBusyTimes` + `/api/calendar/sync`). Disconnect is implemented on Profile via `DELETE /api/calendar/sync`.

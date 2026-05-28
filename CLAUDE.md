@@ -8,10 +8,11 @@ Instructions for Claude Code when working in this repo.
 Hangout is a link-first group scheduling app for college friend groups. Live at hangout-friends.vercel.app.
 
 Before doing any non-trivial work, read these in order:
-1. `GOALS.md` — strategy, why we're building this, kill criteria
-2. `PRODUCT.md` — what the app *should* be (v1 blueprint, design principles, what's explicitly out of scope)
-3. `README.md` — current implementation overview
-4. `docs/audits/PHASE_1_INVENTORY.md` and `docs/audits/PHASE_2_CATEGORIZATION.md` — prior audits of the codebase against the blueprint. Useful context, but verify against current state before treating as authoritative.
+1. `docs/GOALS.md` — strategy, why we're building this, kill criteria
+2. `docs/PRODUCT.md` — what the app *should* be (v1 blueprint, design principles, what's explicitly out of scope)
+3. `docs/README.md` — current implementation overview
+4. `docs/GOOGLE_CALENDAR.md` — if touching Calendar OAuth, pre-fill (HGT-29/34), or deferred QA
+5. `docs/audits/README.md` — Nov 2025 audits; verify against current code (OAuth section is stale)
 
 If a request conflicts with PRODUCT.md, flag the conflict before proceeding. Don't silently override the blueprint.
 

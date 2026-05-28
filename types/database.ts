@@ -254,6 +254,11 @@ export type Database = {
 }
 
 export type User = Database['public']['Tables']['users']['Row']
+
+/** API-safe user shape returned from GET /api/users (no Google secrets). */
+export type UserPublic = Pick<User, 'id' | 'name' | 'token' | 'created_at' | 'home_location'> & {
+  google_calendar_connected?: boolean
+}
 export type Idea = Database['public']['Tables']['ideas']['Row']
 export type Event = Database['public']['Tables']['events']['Row']
 export type RSVP = Database['public']['Tables']['rsvps']['Row']
