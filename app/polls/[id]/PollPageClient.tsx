@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import PollGrid, { formatSlotLabel } from '@/components/PollGrid'
 import PollIdeasBoard, { type PollIdea } from '@/components/PollIdeasBoard'
 import { formatScheduledLabel } from '@/lib/pollSchedule'
+import { buildGoogleCalendarUrl, calendarEventFromPoll } from '@/lib/ics'
 
 type Poll = {
   id: string
@@ -289,6 +290,20 @@ export default function PollPageClient({ id }: { id: string }) {
     ? formatScheduledLabel(new Date(poll.scheduled_at))
     : null
 
+  const calendarEvent = poll
+    ? calendarEventFromPoll({
+        pollId: poll.id,
+        title: poll.title,
+        creatorName: poll.creator_name,
+        scheduledAt: poll.scheduled_at,
+        scheduledEndAt: poll.scheduled_end_at,
+        ideaTitle: scheduledIdea?.title ?? null,
+        location: scheduledIdea?.location ?? null,
+        planUrl: typeof window !== 'undefined' ? window.location.href : null,
+      })
+    : null
+  const googleCalendarUrl = calendarEvent ? buildGoogleCalendarUrl(calendarEvent) : null
+
   if (loading) return <div className="h-80 rounded-xl bg-zinc-800/50 animate-pulse" />
   if (!poll) return <p className="text-zinc-500">Poll not found.</p>
 
@@ -325,6 +340,36 @@ export default function PollPageClient({ id }: { id: string }) {
               </p>
             )}
           </div>
+
+          {calendarEvent && (
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={`/api/polls/${id}/ics`}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium transition-colors touch-manipulation min-h-[44px]"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-4 h-4">
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4" />
+                  </svg>
+                  Add to my calendar
+                </a>
+                {googleCalendarUrl && (
+                  <a
+                    href={googleCalendarUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium transition-colors touch-manipulation min-h-[44px]"
+                  >
+                    Add to Google Calendar
+                  </a>
+                )}
+              </div>
+              <p className="text-xs text-zinc-500">
+                Downloads an .ics file — works in Apple Calendar, Outlook, and more.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <p className="text-sm text-zinc-400">
