@@ -1,14 +1,11 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { usePathname } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
 import PlacesInput from '@/components/PlacesInput'
-import { isAnonymousPlanPage } from '@/lib/planRoutes'
 
 export default function NameModal() {
-  const { user, loading, guestMode, setUser, browseAsGuest } = useUser()
-  const pathname = usePathname()
+  const { user, signInOpen, setUser, hideSignIn } = useUser()
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [homeLocation, setHomeLocation] = useState('')
@@ -18,8 +15,8 @@ export default function NameModal() {
   const [error, setError] = useState('')
   const checkDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  // Admin has its own PIN auth; plan pages are anonymous-first
-  if (loading || user || guestMode || pathname === '/admin' || isAnonymousPlanPage(pathname)) return null
+  // Sign-in is fully optional and only shown when the user explicitly opts in.
+  if (!signInOpen || user) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,13 +43,32 @@ export default function NameModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="w-full sm:max-w-sm bg-zinc-900 border border-zinc-800 sm:rounded-2xl rounded-t-2xl shadow-2xl p-6 pb-8 sm:pb-6">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={hideSignIn}
+    >
+      <div
+        className="relative w-full sm:max-w-sm bg-zinc-900 border border-zinc-800 sm:rounded-2xl rounded-t-2xl shadow-2xl p-6 pb-8 sm:pb-6"
+        onClick={e => e.stopPropagation()}
+      >
         <div className="w-10 h-1 bg-zinc-700 rounded-full mx-auto mb-6 sm:hidden" />
-        <div className="mb-5">
-          <h2 className="text-lg font-semibold text-zinc-100">Welcome to hangout</h2>
+        <button
+          type="button"
+          onClick={hideSignIn}
+          aria-label="Close"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors touch-manipulation"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+        <div className="mb-5 pr-8">
+          <h2 className="text-lg font-semibold text-zinc-100">Sign in to hangout</h2>
           <p className="text-sm text-zinc-500 mt-1">
-            {needsPassword ? 'This name is protected — enter the password.' : 'What should we call you?'}
+            {needsPassword
+              ? 'This name is protected — enter the password.'
+              : 'Optional — only needed for pods, history, and calendar sync.'}
           </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -121,10 +137,10 @@ export default function NameModal() {
           </button>
           <button
             type="button"
-            onClick={browseAsGuest}
+            onClick={hideSignIn}
             className="w-full text-zinc-500 hover:text-zinc-300 text-sm py-2 transition-colors touch-manipulation"
           >
-            Browse as guest
+            Maybe later
           </button>
         </form>
       </div>

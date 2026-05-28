@@ -24,35 +24,33 @@ type UserContextType = {
   user: UserPublic | null
   token: string | null
   loading: boolean
-  guestMode: boolean
+  signInOpen: boolean
   setUser: (user: UserPublic, token: string) => void
   updateUser: (user: UserPublic) => void
   clearUser: () => void
-  browseAsGuest: () => void
   showSignIn: () => void
+  hideSignIn: () => void
 }
 
 const UserContext = createContext<UserContextType>({
   user: null,
   token: null,
   loading: true,
-  guestMode: false,
+  signInOpen: false,
   setUser: () => {},
   updateUser: () => {},
   clearUser: () => {},
-  browseAsGuest: () => {},
   showSignIn: () => {},
+  hideSignIn: () => {},
 })
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<UserPublic | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [guestMode, setGuestMode] = useState(false)
+  const [signInOpen, setSignInOpen] = useState(false)
 
   useEffect(() => {
-    if (sessionStorage.getItem('guest') === '1') setGuestMode(true)
-
     // One-time migration: move token from localStorage to cookie
     const lsToken = localStorage.getItem('gs_token')
     if (lsToken) {
@@ -82,6 +80,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setCookie(COOKIE_NAME, t)
     setUserState(u)
     setToken(t)
+    setSignInOpen(false)
   }
 
   const updateUser = (u: UserPublic) => {
@@ -94,18 +93,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setToken(null)
   }
 
-  const browseAsGuest = () => {
-    sessionStorage.setItem('guest', '1')
-    setGuestMode(true)
-  }
-
-  const showSignIn = () => {
-    sessionStorage.removeItem('guest')
-    setGuestMode(false)
-  }
+  const showSignIn = () => setSignInOpen(true)
+  const hideSignIn = () => setSignInOpen(false)
 
   return (
-    <UserContext.Provider value={{ user, token, loading, guestMode, setUser, updateUser, clearUser, browseAsGuest, showSignIn }}>
+    <UserContext.Provider value={{ user, token, loading, signInOpen, setUser, updateUser, clearUser, showSignIn, hideSignIn }}>
       {children}
     </UserContext.Provider>
   )

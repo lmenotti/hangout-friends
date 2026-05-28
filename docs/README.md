@@ -217,7 +217,7 @@ components/
   CreateEventForm.tsx
   EventsList.tsx
   IdeasBoard.tsx
-  NameModal.tsx           # Global name prompt (being replaced with inline prompt on plan pages)
+  NameModal.tsx           # Opt-in sign-in dialog (only shown when user clicks "Sign in"; never auto-pops)
   Nav.tsx
 context/
   UserContext.tsx         # Token-based identity in localStorage (being replaced with cookies + magic link)
