@@ -2,8 +2,6 @@
 
 import Link from 'next/link'
 import { useUser } from '@/context/UserContext'
-import EventsList from '@/components/EventsList'
-import AvailabilityGrid from '@/components/AvailabilityGrid'
 
 function Dashboard() {
   const { user } = useUser()
@@ -14,40 +12,24 @@ function Dashboard() {
         <h1 className="text-2xl font-semibold text-zinc-100">{user?.name}</h1>
       </div>
 
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-widest">Upcoming</h2>
-          <Link href="/events" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-            All events →
-          </Link>
-        </div>
-        <EventsList upcomingOnly />
-      </section>
-
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-widest">Availability</h2>
-          <Link href="/availability" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-            Full view →
-          </Link>
-        </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-          <AvailabilityGrid />
-        </div>
-      </section>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Link href="/ideas" className="group flex items-center justify-between p-4 rounded-xl border border-zinc-800 bg-zinc-900 hover:border-zinc-700 transition-colors">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Link
+          href="/polls/new"
+          className="group flex items-center justify-between p-5 rounded-xl border border-indigo-500/30 bg-indigo-950/20 hover:border-indigo-500/50 transition-colors"
+        >
           <div>
-            <p className="text-sm font-medium text-zinc-200">Ideas</p>
-            <p className="text-xs text-zinc-500 mt-0.5">Vote on what to do</p>
+            <p className="text-sm font-medium text-zinc-100">New plan</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Create a link to share in iMessage</p>
           </div>
-          <span className="text-zinc-600 group-hover:text-zinc-400 transition-colors">→</span>
+          <span className="text-indigo-400 group-hover:text-indigo-300 transition-colors">→</span>
         </Link>
-        <Link href="/events" className="group flex items-center justify-between p-4 rounded-xl border border-zinc-800 bg-zinc-900 hover:border-zinc-700 transition-colors">
+        <Link
+          href="/pods"
+          className="group flex items-center justify-between p-5 rounded-xl border border-zinc-800 bg-zinc-900 hover:border-zinc-700 transition-colors"
+        >
           <div>
-            <p className="text-sm font-medium text-zinc-200">Events</p>
-            <p className="text-xs text-zinc-500 mt-0.5">RSVP and manage</p>
+            <p className="text-sm font-medium text-zinc-200">Pods</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Your recurring friend groups</p>
           </div>
           <span className="text-zinc-600 group-hover:text-zinc-400 transition-colors">→</span>
         </Link>
@@ -62,16 +44,23 @@ function Landing() {
       <div className="space-y-4 max-w-lg">
         <h1 className="text-5xl font-bold text-zinc-100 tracking-tight">hangout</h1>
         <p className="text-lg text-zinc-400 leading-relaxed">
-          Stop fighting group chats. One place to coordinate when to hang, what to do, and who&apos;s in.
+          Drop a link in iMessage. Everyone marks when they&apos;re free — no account, no app download.
         </p>
       </div>
 
+      <Link
+        href="/polls/new"
+        className="inline-flex items-center justify-center px-8 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-base transition-colors touch-manipulation min-h-[48px]"
+      >
+        Create a plan
+      </Link>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg text-left">
         {[
-          { emoji: '🗓️', title: 'Availability', desc: 'Mark your free hours. See the group overlap.' },
-          { emoji: '💡', title: 'Ideas & voting', desc: 'Suggest plans. Vote on what sounds good.' },
-          { emoji: '✨', title: 'Auto-schedule', desc: 'One click picks the time that works for most.' },
-          { emoji: '📅', title: 'RSVP', desc: 'Know exactly who\'s coming to each event.' },
+          { emoji: '🔗', title: 'Share a link', desc: 'One URL in group chat. Everyone responds anonymously.' },
+          { emoji: '🗓️', title: 'Mark availability', desc: 'Tap or drag on a mobile-friendly grid.' },
+          { emoji: '💡', title: 'Vote on ideas', desc: 'Suggest activities. Upvote what sounds good.' },
+          { emoji: '✨', title: 'Auto-schedule', desc: 'One click locks the best time and activity.' },
         ].map(card => (
           <div key={card.title} className="p-4 rounded-xl border border-zinc-800 bg-zinc-900">
             <span className="text-xl">{card.emoji}</span>
@@ -80,10 +69,6 @@ function Landing() {
           </div>
         ))}
       </div>
-
-      <p className="text-sm text-zinc-600 max-w-sm">
-        Share this URL with your friends — everyone joins the same group automatically. No accounts needed.
-      </p>
     </div>
   )
 }
@@ -96,11 +81,9 @@ export default function Home() {
       <div className="space-y-4 pt-4">
         <div className="h-8 w-32 bg-zinc-800 rounded-lg animate-pulse" />
         <div className="h-40 bg-zinc-800/50 rounded-2xl animate-pulse" />
-        <div className="h-64 bg-zinc-800/50 rounded-2xl animate-pulse" />
       </div>
     )
   }
 
   return user ? <Dashboard /> : <Landing />
 }
-

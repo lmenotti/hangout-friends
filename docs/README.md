@@ -213,15 +213,27 @@ types/
 
 ## What's being built now
 
-Active priorities (see [Linear](https://linear.app/hangout-friends) for the full board):
+Active priorities (synced with [Linear](https://linear.app/hangout-friends) May 28, 2026):
 
-1. **Unblock the anonymous plan flow** — remove the NameModal gate from plan pages so strangers can see the plan immediately (HGT-10)
-2. **Low-friction plan creation** — auto-fill dates, no account required, instant shareable link (HGT-8)
-3. **Save-as-you-go availability** — no submit button; slots persist on every tap (HGT-6)
-4. **Mobile grid polish** — fix fiddly drag-select, add tap-to-toggle mode, 44px tap targets (HGT-23/24/25)
-5. **Plan slugs** — migrate URLs from `/polls/[uuid]` to `/p/[slug]` (e.g. `dinner-saturday-x7k`) (HGT-35)
-6. **Deprecate legacy global surfaces** — remove `/availability`, `/ideas`, `/events` from nav (HGT-7)
-7. **PWA manifest** — `manifest.json` + icons for Add to Home Screen on iOS/Android (HGT-27)
-8. **Email magic link auth** — replace name+password localStorage token system (HGT-11/13)
-9. **Verify OG previews** — confirm rich link previews render in iMessage, WhatsApp, Discord, Slack (HGT-21)
-10. **Google Calendar pre-fill** — read-only busy times to pre-fill availability (HGT-29, blocked on HGT-34)
+**Sprint 0 — unblock the sacred link flow (do first):**
+
+1. **HGT-10** (Urgent, In Progress) — Fix NameModal still blocking `/p/[slug]` share links (fix only applied to `/polls/*` so far)
+2. **HGT-44** (High, Todo) — Hide BottomNav on plan respond pages
+3. **HGT-6** (High, In Progress) — Save-as-you-go availability; no explicit Save button
+4. **HGT-23/24/25** (High, In Review) — Mobile grid polish: 44px cells, tap-to-toggle default
+5. **HGT-17** (Urgent, Todo) — Run 5-friend mobile Safari teardown test (after HGT-10)
+6. **HGT-21** (High, Backlog) — Verify OG previews in iMessage, WhatsApp, Discord, Slack
+
+**Sprint 1 — close the plan lifecycle:**
+
+7. **HGT-18 → HGT-19 → HGT-20** — Plan-scoped ideas, auto-schedule, RSVP (all Backlog)
+8. **HGT-35** (In Progress) — Finish slug migration: UUID→slug redirect, AASA `/p/*` paths
+9. **HGT-7** (In Progress) — Finish legacy deprecation: remove old links from home dashboard
+
+**Done / deferred:**
+
+- **HGT-8** — Low-friction plan creation (**Done**)
+- **HGT-26** — BottomNav tab cleanup (**Done**)
+- **HGT-27/28** — PWA + push notifications (after M1 validation)
+- **HGT-11/13/15** — Auth + cookie identity (after M1)
+- **HGT-29/34** — Google Calendar (rewrite; defer until build order step 7)

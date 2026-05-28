@@ -126,7 +126,7 @@ export default function PollGrid({ dates, mySlots, aggregate, totalResponders, e
           className="grid mb-px"
           style={{ gridTemplateColumns: `40px repeat(${colCount}, 1fr)` }}
         >
-          <div className="text-right pr-2 text-[10px] text-zinc-600 flex items-start justify-end pt-0.5 h-5">
+          <div className="text-right pr-2 text-[10px] text-zinc-600 flex items-center justify-end h-11">
             {minute === 0 ? hourLabel(hour) : ''}
           </div>
           {dates.map(date => {
@@ -144,13 +144,13 @@ export default function PollGrid({ dates, mySlots, aggregate, totalResponders, e
               <div
                 key={key}
                 data-cell={key}
-                className={`mx-px h-5 rounded-sm transition-colors duration-75 ${cellClass} ${editing ? 'cursor-pointer' : ''}`}
+                className={`mx-px min-h-[44px] h-11 rounded-sm transition-colors duration-75 ${cellClass} ${editing ? 'cursor-pointer touch-manipulation' : ''}`}
                 onMouseDown={tapMode ? undefined : () => onMouseDown(key)}
                 onMouseEnter={tapMode ? undefined : () => onMouseEnter(key)}
                 onClick={tapMode && editing ? () => onToggle(key, !mySlots.has(key)) : undefined}
               >
                 {count > 0 && !editing && (
-                  <span className="text-[9px] text-white/80 float-right pr-0.5 leading-5">{count}</span>
+                  <span className="text-[10px] text-white/80 float-right pr-1 leading-[44px]">{count}</span>
                 )}
               </div>
             )

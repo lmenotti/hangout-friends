@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useUser } from '@/context/UserContext'
+import { isPlanRespondPage } from '@/lib/planRoutes'
 
 const tabs = [
   {
@@ -52,10 +52,8 @@ const tabs = [
 
 export default function BottomNav() {
   const pathname = usePathname()
-  const { user } = useUser()
 
-  // Don't show on admin page — it has its own auth flow
-  if (pathname === '/admin') return null
+  if (pathname === '/admin' || isPlanRespondPage(pathname)) return null
 
   return (
     <nav

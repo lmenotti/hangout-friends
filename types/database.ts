@@ -52,7 +52,9 @@ export type Database = {
           id: string
           title: string
           description: string | null
-          created_by: string
+          created_by: string | null
+          created_by_name: string | null
+          poll_id: string | null
           created_at: string
           duration_minutes: number | null
           is_outdoor: boolean | null
@@ -68,7 +70,9 @@ export type Database = {
           id?: string
           title: string
           description?: string | null
-          created_by: string
+          created_by?: string | null
+          created_by_name?: string | null
+          poll_id?: string | null
           created_at?: string
           duration_minutes?: number | null
           is_outdoor?: boolean | null
@@ -84,7 +88,9 @@ export type Database = {
           id?: string
           title?: string
           description?: string | null
-          created_by?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          poll_id?: string | null
           created_at?: string
           duration_minutes?: number | null
           is_outdoor?: boolean | null
@@ -161,6 +167,38 @@ export type Database = {
           event_id?: string
           user_id?: string
           status?: 'yes' | 'maybe' | 'no'
+        }
+      }
+      polls: {
+        Row: {
+          id: string
+          title: string
+          creator_name: string
+          date_options: string[]
+          slug: string
+          status: 'polling' | 'scheduled'
+          scheduled_at: string | null
+          scheduled_end_at: string | null
+          scheduled_idea_id: string | null
+          scheduled_slot_key: string | null
+          expires_at: string | null
+          created_at: string
+        }
+      }
+      poll_rsvps: {
+        Row: {
+          poll_id: string
+          respondent_name: string
+          status: 'yes' | 'maybe' | 'no'
+          created_at: string
+          updated_at: string
+        }
+      }
+      poll_idea_votes: {
+        Row: {
+          idea_id: string
+          respondent_name: string
+          created_at: string
         }
       }
     }

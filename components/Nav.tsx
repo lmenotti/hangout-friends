@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
+import { isPlanRespondPage } from '@/lib/planRoutes'
 
 const links = [
   { href: '/pods', label: 'Pods' },
@@ -13,6 +14,8 @@ const links = [
 export default function Nav() {
   const pathname = usePathname()
   const { user, guestMode, showSignIn } = useUser()
+
+  if (isPlanRespondPage(pathname)) return null
 
   return (
     <nav className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur-xl">

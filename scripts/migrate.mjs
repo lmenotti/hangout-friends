@@ -13,26 +13,19 @@
  *                            Project Settings → Database → Connection string → URI
  */
 
-import { readFileSync, readdirSync, existsSync } from 'fs'
+import { readFileSync, readdirSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { loadEnvLocal, envValue } from './loadEnvLocal.mjs'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
-
-// Load .env.local for local dev (Vercel injects env vars automatically in CI)
-const envFile = resolve(__dir, '../.env.local')
-if (existsSync(envFile)) {
-  for (const line of readFileSync(envFile, 'utf8').split('\n')) {
-    const match = line.match(/^([^#=]+)=(.*)$/)
-    if (match) process.env[match[1].trim()] ??= match[2].trim()
-  }
-}
+loadEnvLocal(__dir)
 const migrationsDir = resolve(__dir, '../migrations')
 
-const PROJECT_REF = process.env.SUPABASE_PROJECT_REF || 'guzwglkxoyunnsraddhu'
+const PROJECT_REF = envValue('SUPABASE_PROJECT_REF') || 'guzwglkxoyunnsraddhu'
 // Strip any non-ASCII chars that can sneak in via terminal copy-paste
-const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN?.replace(/[^\x20-\x7E]/g, '').trim() || undefined
-const DB_URL = process.env.SUPABASE_DB_URL?.trim() || undefined
+const ACCESS_TOKEN = envValue('SUPABASE_ACCESS_TOKEN')?.replace(/[^\x20-\x7E]/g, '') || undefined
+const DB_URL = envValue('SUPABASE_DB_URL') || undefined
 
 if (!ACCESS_TOKEN && !DB_URL) {
   console.log('⚠  No SUPABASE_ACCESS_TOKEN or SUPABASE_DB_URL set — skipping migrations')
@@ -50,6 +43,14 @@ async function runSqlViaApi(sql) {
   })
   if (!res.ok) {
     const text = await res.text()
+    if (res.status === 401) {
+      throw new Error(
+        `Supabase Management API 401: JWT could not be decoded.\n` +
+        `  SUPABASE_ACCESS_TOKEN is invalid, expired, or not a personal access token.\n` +
+        `  Generate a new one at https://supabase.com/dashboard/account/tokens (starts with sbp_).\n` +
+        `  Do NOT paste SUPABASE_SERVICE_ROLE_KEY here — use SUPABASE_DB_URL instead if unsure.`
+      )
+    }
     throw new Error(`Supabase API error (${res.status}): ${text}`)
   }
   return res.json()

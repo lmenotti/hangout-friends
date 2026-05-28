@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 import PollPageClient from './PollPageClient'
 
@@ -48,5 +49,14 @@ export async function generateMetadata(
 
 export default async function PollPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+
+  const { data: poll } = await supabase
+    .from('polls')
+    .select('slug')
+    .eq('id', id)
+    .single()
+
+  if (poll?.slug) redirect(`/p/${poll.slug}`)
+
   return <PollPageClient id={id} />
 }

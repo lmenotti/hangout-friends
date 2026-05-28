@@ -12,11 +12,20 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 
   if (error) return NextResponse.json({ error: 'Poll not found' }, { status: 404 })
 
-  const { data: responses } = await supabase
-    .from('poll_responses')
-    .select('*')
-    .eq('poll_id', id)
-    .order('created_at')
+  const [{ data: responses }, { data: rsvps }] = await Promise.all([
+    supabase.from('poll_responses').select('*').eq('poll_id', id).order('created_at'),
+    supabase.from('poll_rsvps').select('*').eq('poll_id', id).order('updated_at'),
+  ])
+
+  let scheduled_idea: { id: string; title: string; location: string | null } | null = null
+  if (poll.scheduled_idea_id) {
+    const { data: idea } = await supabase
+      .from('ideas')
+      .select('id, title, location')
+      .eq('id', poll.scheduled_idea_id)
+      .single()
+    scheduled_idea = idea
+  }
 
   const aggregate: Record<string, number> = {}
   for (const r of responses ?? []) {
@@ -25,5 +34,11 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     }
   }
 
-  return NextResponse.json({ poll, responses: responses ?? [], aggregate })
+  return NextResponse.json({
+    poll,
+    responses: responses ?? [],
+    aggregate,
+    rsvps: rsvps ?? [],
+    scheduled_idea,
+  })
 }

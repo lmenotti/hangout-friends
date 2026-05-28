@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
 import PlacesInput from '@/components/PlacesInput'
+import { isAnonymousPlanPage } from '@/lib/planRoutes'
 
 export default function NameModal() {
   const { user, loading, guestMode, setUser, browseAsGuest } = useUser()
@@ -17,8 +18,8 @@ export default function NameModal() {
   const [error, setError] = useState('')
   const checkDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  // Admin has its own PIN auth; poll response pages are anonymous-first
-  if (loading || user || guestMode || pathname === '/admin' || pathname.startsWith('/polls/')) return null
+  // Admin has its own PIN auth; plan pages are anonymous-first
+  if (loading || user || guestMode || pathname === '/admin' || isAnonymousPlanPage(pathname)) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

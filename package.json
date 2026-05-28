@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/migrate.mjs && next build",
+    "migrate": "node scripts/migrate.mjs",
+    "verify:021": "node scripts/verify-migration-021.mjs",
+    "test:plan-loop": "node scripts/test-plan-loop.mjs",
     "start": "next start",
     "lint": "eslint"
   },
