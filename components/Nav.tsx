@@ -13,7 +13,7 @@ const links = [
 
 export default function Nav() {
   const pathname = usePathname()
-  const { user, guestMode, showSignIn } = useUser()
+  const { user, loading, showSignIn } = useUser()
 
   if (isPlanRespondPage(pathname)) return null
 
@@ -41,7 +41,7 @@ export default function Nav() {
             ))}
           </div>
         </div>
-        {!user && guestMode && (
+        {!user && !loading && (
           <button
             onClick={showSignIn}
             className="text-sm px-3 py-2 rounded-lg transition-colors touch-manipulation min-h-[44px] flex items-center gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"

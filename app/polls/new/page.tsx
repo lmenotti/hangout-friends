@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useUser } from '@/context/UserContext'
 
 function buildMonthDays(year: number, month: number) {
   const firstDay = new Date(year, month, 1).getDay()
@@ -28,10 +29,17 @@ function nextSevenDays(): Set<string> {
 
 export default function NewPollPage() {
   const router = useRouter()
+  const { user } = useUser()
   const [title, setTitle] = useState('')
+  const [creatorName, setCreatorName] = useState('')
   const [selectedDates, setSelectedDates] = useState<Set<string>>(nextSevenDays)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  // Prefill the creator name for signed-in users.
+  useEffect(() => {
+    if (user?.name) setCreatorName(user.name)
+  }, [user?.name])
 
   const today = new Date()
   const [viewYear, setViewYear] = useState(today.getFullYear())
@@ -61,6 +69,7 @@ export default function NewPollPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) { setError('Give your plan a title.'); return }
+    if (!creatorName.trim()) { setError('Add your name so people know who created this.'); return }
     if (selectedDates.size === 0) { setError('Select at least one date.'); return }
     setSubmitting(true)
     setError('')
@@ -70,6 +79,7 @@ export default function NewPollPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title.trim(),
+          creator_name: creatorName.trim(),
           date_options: Array.from(selectedDates).sort(),
         }),
       })
@@ -95,6 +105,15 @@ export default function NewPollPage() {
           onChange={e => setTitle(e.target.value)}
           placeholder="What's the plan? e.g. Weekend hangout"
           autoFocus
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-base"
+        />
+
+        <input
+          value={creatorName}
+          onChange={e => setCreatorName(e.target.value)}
+          placeholder="Your name"
+          maxLength={40}
+          autoComplete="given-name"
           className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-base"
         />
 
