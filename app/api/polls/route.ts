@@ -47,22 +47,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
-  const slug = await generateSlug(title.trim())
   const resolvedExpiresAt =
     expires_at ?? computeExpiresAtFromDateOptions(date_options as string[])
 
-  const { data, error } = await supabase
-    .from('polls')
-    .insert({
-      title: title.trim(),
-      creator_name: creator_name?.trim() || 'Someone',
-      date_options,
-      expires_at: resolvedExpiresAt,
-      slug,
-    })
-    .select()
-    .single()
+  let data: unknown = null
+  let error: unknown = null
+  try {
+    const slug = await generateSlug(title.trim())
+    ;({ data, error } = await supabase
+      .from('polls')
+      .insert({
+        title: title.trim(),
+        creator_name: creator_name?.trim() || 'Someone',
+        date_options,
+        expires_at: resolvedExpiresAt,
+        slug,
+      })
+      .select()
+      .single())
+  } catch (e) {
+    // Thrown before we even reach Supabase (e.g. missing admin credentials).
+    error = e
+  }
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    // Don't leak backend specifics (e.g. Supabase's "Invalid API key") to the
+    // anonymous link flow — it's confusing and exposes infra detail. Log the
+    // real error for diagnosis and return a friendly message instead.
+    console.error('[api/polls] failed to create plan:', error)
+    return NextResponse.json(
+      { error: 'Could not create the plan. Please try again.' },
+      { status: 500 },
+    )
+  }
   return NextResponse.json(data)
 }
