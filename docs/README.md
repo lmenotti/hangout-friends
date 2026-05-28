@@ -74,14 +74,62 @@ Create a `.env.local` file:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-NEXT_PUBLIC_BASE_URL=http://localhost:3000          # used for OAuth callbacks; set to production URL in Vercel
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+NEXT_PUBLIC_BASE_URL=http://localhost:3000          # canonical app origin (no trailing slash)
 ADMIN_PIN=your_admin_pin
 SUPABASE_ACCESS_TOKEN=your_supabase_personal_access_token
 GOOGLE_MAPS_API_KEY=your_google_maps_key            # optional — enables travel time estimates
 ANTHROPIC_API_KEY=your_anthropic_key                # optional — enables Claude fix suggestions in admin
+GOOGLE_CLIENT_ID=your_google_oauth_client_id        # Google Calendar OAuth (local dev only; see below)
+GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 ```
 
+**`NEXT_PUBLIC_BASE_URL`** — Single canonical origin for the app: OG/meta absolute URLs, share links, and Google OAuth redirect construction. Use `http://localhost:3000` locally. In Vercel **Production**, set to `https://hangout-friends.vercel.app` (no trailing slash). Do not use a separate `NEXT_PUBLIC_APP_URL`; that name is retired.
+
+`SUPABASE_SERVICE_ROLE_KEY` is the service role secret from your Supabase project's API settings. **Never prefix this with `NEXT_PUBLIC_`** — it must remain server-only. All API routes use this key via `supabaseAdmin` in `lib/supabase.ts`, which bypasses RLS. The anon key is retained only for public-read Server Components.
+
 `SUPABASE_ACCESS_TOKEN` is a personal access token from [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens). Used by the migration runner at build time.
+
+### Google Calendar OAuth (planned)
+
+Routes are not implemented yet; paths and env names are fixed so GCP / Vercel setup can proceed.
+
+| Item | Value |
+|------|--------|
+| Auth start (planned) | `GET /api/google/auth` |
+| OAuth callback (planned) | `GET /api/google/callback` |
+| Redirect URI (prod) | `https://hangout-friends.vercel.app/api/google/callback` |
+| Redirect URI (local) | `http://localhost:3000/api/google/callback` |
+| JavaScript origins | `https://hangout-friends.vercel.app`, `http://localhost:3000` |
+
+**Environments:** OAuth is enabled for **production + localhost only**. Vercel **Preview** deploys do not get Google OAuth — no preview URLs in the GCP client, and `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` are not required for Preview. Calendar connect will 404 or no-op on preview until we explicitly expand coverage.
+
+**Where to store keys**
+
+| Variable | `.env.local` | Vercel Production | Vercel Preview |
+|----------|--------------|-------------------|----------------|
+| `GOOGLE_CLIENT_ID` | yes | yes (Sensitive) | omit |
+| `GOOGLE_CLIENT_SECRET` | yes | yes (Sensitive) | omit |
+| `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` | `https://hangout-friends.vercel.app` | optional; previews don't use OAuth |
+
+**GCP checklist (external Web client)**
+
+1. OAuth consent screen — app name, support email, scopes (e.g. `calendar.readonly`).
+2. Enable **Google Calendar API** on the project.
+3. Create OAuth client → register redirect URIs and JS origins exactly as in the table above.
+4. While app is in **Testing**, add test users on the consent screen; only they can authorize until publish/verification.
+
+**When to change the OAuth environment policy**
+
+Expand beyond prod + localhost when you need Calendar connect on a stable non-prod host (e.g. dedicated staging). Then:
+
+1. **Google Cloud Console** → Credentials → your Web client → add the new **Authorized redirect URI** and **Authorized JavaScript origin** (exact URL, including path for redirects).
+2. **Vercel** → add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to that environment; set `NEXT_PUBLIC_BASE_URL` to that host's origin.
+3. **Code** — ensure `/api/google/auth` and `/api/google/callback` build redirect URLs from `NEXT_PUBLIC_BASE_URL` only (no hardcoded hosts).
+
+If the callback path changes (e.g. rename `/api/google/callback`), update GCP redirect URIs, this doc, and the OAuth client constructor in `lib/googleCalendar.ts` in the same change.
+
+**Do not** add wildcard or per-preview `*.vercel.app` redirect URIs; Google requires exact matches and preview URLs change per deploy.
 
 ### Database migrations
 
@@ -102,6 +150,8 @@ Applied migrations are tracked in a `_migrations` table. New files are picked up
 
 Connected to Vercel via GitHub — every push to `main` triggers a production deploy. Migrations run automatically as part of the build step.
 
+Set `NEXT_PUBLIC_BASE_URL` per Vercel environment: `https://hangout-friends.vercel.app` for **Production**, `http://localhost:3000` for **Development** (pull with `vercel env pull`). Preview deployments intentionally omit Google OAuth credentials (see Google Calendar OAuth above).
+
 ```bash
 npx vercel --prod   # manual deploy
 ```
@@ -120,7 +170,7 @@ app/
     bug-reports/          # Bug report CRUD
     claude-fix/           # Claude AI fix suggestion
     events/               # Events + RSVP (legacy global)
-    google/               # Google Calendar OAuth (auth + callback)
+    google/               # Google Calendar OAuth: auth + callback (planned: /api/google/auth, /api/google/callback)
     ideas/                # Ideas + voting (legacy global)
     og/                   # Dynamic OG image generation for plan links
     places/autocomplete/  # Google Places autocomplete for idea locations

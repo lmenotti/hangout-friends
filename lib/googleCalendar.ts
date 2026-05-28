@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin as supabase } from '@/lib/supabase'
 const { google } = require('googleapis');
 import { Database } from '@/types/database'
 
@@ -12,10 +12,11 @@ const listGoogleEvents = async (userId : string, calendarId: string = "primary")
    
       if (!user?.google_access_token) throw new Error("Google tokens not found for user.");
    
+      const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000').replace(/\/$/, '')
       const oAuth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        ""
+        `${baseUrl}/api/google/callback`
       );
    
    

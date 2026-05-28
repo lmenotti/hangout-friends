@@ -1,8 +1,8 @@
 import { Metadata } from 'next'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin as supabase } from '@/lib/supabase'
 import EventPageClient from './EventPageClient'
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://hangout-friends.vercel.app'
+const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://hangout-friends.vercel.app'
 
 export async function generateMetadata(
   { params }: { params: Promise<{ id: string; eventId: string }> }

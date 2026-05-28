@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin as supabase } from '@/lib/supabase'
 import PollPageClient from '@/app/polls/[id]/PollPageClient'
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://hangout-friends.vercel.app'
+const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://hangout-friends.vercel.app'
 
 async function getPollBySlug(slug: string) {
   const { data } = await supabase
