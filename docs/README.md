@@ -14,22 +14,38 @@ The atomic unit is a **plan**: a shareable URL anyone can respond to without cre
 
 ---
 
-## Current state (as of May 2026)
+## Current state (as of May 28, 2026)
 
-The app is mid-pivot from a single-group shared board to the plans-first model. The core plan flow (`/polls/new`, `/polls/[id]`) exists and is being actively polished. Legacy global surfaces (`/availability`, `/ideas`, `/events`) are present in the codebase but are being deprecated in favor of plan-scoped equivalents.
+Waves 0–3 of the MVP agent plan are **code-complete** (pending commit/deploy). The product is plans-first: create at `/polls/new`, share `/p/[slug]`, anonymous respond with save-as-you-go availability, ideas, auto-schedule, and RSVP — no account required.
+
+**Shipped tonight (in working tree):**
+
+| Area | Linear / work | Notes |
+|------|----------------|-------|
+| Link shell | HGT-6/7/8/10/23–26/35/44 | Slug URLs, mobile grid, no NameModal on plan pages, hidden nav chrome |
+| Plan lifecycle | HGT-18/19/20 | Ideas, auto-schedule + lock, RSVP + heatmap drill-down — E2E passes |
+| OG previews | HGT-21 | Code shipped; platform verify (iMessage, WhatsApp, Discord, Slack) deferred to human QA |
+| PWA | HGT-27 | `manifest.json`, icons, `InstallPrompt` |
+| Cookie identity | HGT-15 | Per-plan httpOnly cookie via `lib/planIdentity.ts` |
+| Plan expiration | migration 022 | Daily cron archives plans past `expires_at` |
+| Google Calendar | HGT-29/34 | OAuth routes live; prod smoke test deferred |
+| Push | HGT-28 | migration 023, service worker, 3 allowlisted types; `PushNotificationPrompt` + `/api/push/watches` (httpOnly plan cookie reads for `plan_watches`) |
+
+Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo but are off nav. Orphaned global components removed. Pods exist but are frozen for MVP validation.
 
 ---
 
 ## Features
 
 ### Plans (core, no account required)
-- **Create a plan** — name + date range → shareable URL (currently `/polls/[id]`; migrating to `/p/[slug]`)
+- **Create a plan** — name + date range → shareable slug URL at `/p/[slug]`
 - **Respond anonymously** — enter a first name, drag-select availability on the weekly grid
 - **Availability heatmap** — color-graded grid showing overlap density; tap a cell to see who's free
 - **Activity ideas + voting** — anyone suggests an activity, anyone upvotes; no downvotes
 - **Auto-schedule** — one click picks the best (time, activity) pair based on voter overlap
 - **RSVP** — yes / maybe / no once a plan is locked
 - **OG link previews** — rich previews in iMessage, Discord, Slack (served from `/api/og`)
+- **Push notifications** — after responding to a plan, user leaves the respond page → dismissible `PushNotificationPrompt` → Enable calls `Notification.requestPermission()` → `/api/push/subscribe` registers watches; server reads httpOnly `hangout_plan_*` cookies via `/api/push/watches` (not visible to `document.cookie`)
 
 ### Pods (account required)
 - Create a named pod, share a join link
@@ -82,6 +98,17 @@ GOOGLE_MAPS_API_KEY=your_google_maps_key            # optional — enables trave
 ANTHROPIC_API_KEY=your_anthropic_key                # optional — enables Claude fix suggestions in admin
 GOOGLE_CLIENT_ID=your_google_oauth_client_id        # Google Calendar OAuth (local dev only; see below)
 GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
+VAPID_PUBLIC_KEY=your_vapid_public_key              # Web Push (server)
+VAPID_PRIVATE_KEY=your_vapid_private_key            # Web Push (server — never NEXT_PUBLIC_)
+VAPID_SUBJECT=mailto:hello@hangout-friends.vercel.app  # optional Web Push contact URI
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=your_vapid_public_key  # same public key for browser subscribe
+CRON_SECRET=your_cron_secret                        # secures /api/cron/* (Vercel Cron sends Bearer token)
+```
+
+Generate Web Push VAPID keys with:
+
+```bash
+npx web-push generate-vapid-keys
 ```
 
 **`NEXT_PUBLIC_BASE_URL`** — Single canonical origin for the app: OG/meta absolute URLs, share links, and Google OAuth redirect construction. Use `http://localhost:3000` locally. In Vercel **Production**, set to `https://hangout-friends.vercel.app` (no trailing slash). Do not use a separate `NEXT_PUBLIC_APP_URL`; that name is retired.
@@ -90,14 +117,14 @@ GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 
 `SUPABASE_ACCESS_TOKEN` is a personal access token from [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens). Used by the migration runner at build time.
 
-### Google Calendar OAuth (planned)
+### Google Calendar OAuth
 
-Routes are not implemented yet; paths and env names are fixed so GCP / Vercel setup can proceed.
+OAuth routes are implemented. Preview deploys still omit Google credentials (see policy below).
 
 | Item | Value |
 |------|--------|
-| Auth start (planned) | `GET /api/google/auth` |
-| OAuth callback (planned) | `GET /api/google/callback` |
+| Auth start | `GET /api/google/auth` |
+| OAuth callback | `GET /api/google/callback` |
 | Redirect URI (prod) | `https://hangout-friends.vercel.app/api/google/callback` |
 | Redirect URI (local) | `http://localhost:3000/api/google/callback` |
 | JavaScript origins | `https://hangout-friends.vercel.app`, `http://localhost:3000` |
@@ -211,42 +238,34 @@ types/
 
 ---
 
-## What's being built now
+## Active priorities
 
-Active priorities (synced with [Linear](https://linear.app/hangout-friends) after commit `284cb7a`, May 28 2026):
+Synced with [Linear](https://linear.app/hangout-friends). Code for Waves 0–3 is complete; human validation runs tomorrow. Wave 4 is optional backlog.
 
-### Shipped this session (Done)
+### Done (code shipped — human QA where noted)
 
 | Issue | What landed |
 |-------|-------------|
-| **HGT-10** | NameModal skipped on `/p/*` and `/polls/*` plan pages |
-| **HGT-44** | BottomNav + top Nav hidden on plan respond pages |
-| **HGT-6** | Save-as-you-go availability (no explicit Save button) |
-| **HGT-23/24/25** | 44px grid cells, tap-to-toggle default on mobile |
-| **HGT-35** | Slug URLs at `/p/[slug]`, UUID redirect, AASA `/p/*` |
-| **HGT-7** | Plans-first home dashboard; legacy surfaces off nav |
-| **HGT-8**, **HGT-26** | Plan creation + BottomNav tabs (prior work) |
+| **HGT-6/7/8/10/23–26/35/44** | Link shell: save-as-you-go, plans-first home, slug URLs, mobile grid, no NameModal on plan pages, hidden nav chrome |
+| **HGT-18/19/20** | Plan ideas, auto-schedule + lock, RSVP + heatmap drill-down — E2E passes |
+| **HGT-21** | OG route + scheduled-state metadata — **platform verify deferred** |
+| **HGT-27** | PWA manifest, icons, install prompt |
+| **HGT-15** | Per-plan cookie identity on respond + RSVP |
+| **Plan expiration** | migration 022, daily cron archives expired plans |
+| **HGT-29/34** | Google Calendar OAuth rewrite — **prod OAuth test deferred** |
+| **HGT-28** | Push subscriptions, service worker, 3 allowlisted types; permission prompt shipped (`PushNotificationPrompt`) — **real-device push test deferred** |
 
-### In Review — MVP shipped, needs QA / polish
+Dev verification: `npm run verify:021` · `npm run test:plan-loop` · `npm run build`
 
-| Issue | Status |
-|-------|--------|
-| **HGT-18** | Plan-scoped ideas + voting (migration 021, API, `PollIdeasBoard`) |
-| **HGT-19** | Auto-schedule + lock to `scheduled` state |
-| **HGT-20** | RSVP yes/maybe/no — API works; **UI polish open** (name lists, self-feedback, one-step flow, "who's coming") |
+### Tomorrow (human validation)
 
-Dev verification: `npm run verify:021` · `npm run test:plan-loop`
+1. **HGT-17** — 5-friend mobile Safari teardown (Sprint 0 exit criteria)
+2. **HGT-21** — OG previews in iMessage, WhatsApp, Discord, Slack
+3. **HGT-27/28** — PWA install + end-to-end push on real devices (permission prompt exists; verify subscribe + delivery)
+4. **HGT-29/34** — Google OAuth smoke test on production
 
-### Next up (active backlog)
+### Deferred — Wave 4 (optional)
 
-1. **HGT-17** (Urgent) — 5-friend mobile Safari teardown test (Sprint 0 exit criteria; unblocked)
-2. **HGT-20 polish** — close RSVP visibility gaps from QA (see Linear comment on HGT-20)
-3. **HGT-21** — Verify OG previews in iMessage, WhatsApp, Discord, Slack
-
-### Deferred (post-M1)
-
-- **HGT-27/28** — PWA + push notifications
-- **HGT-11/13/15** — Auth + cookie identity
-- **HGT-29/34** — Google Calendar rewrite
-- **HGT-22** — Auto-scheduler: show top 3 candidates instead of silent pick
-- **PRODUCT.md §3** — Tap heatmap cell → see who's free (not yet ticketed)
+- **HGT-11/13** — Email + magic link auth
+- **HGT-22** — Auto-scheduler top-3 candidate picker
+- **ICS export** — one-shot “Add to calendar” on scheduled plans (create Linear issue if missing)

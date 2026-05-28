@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 
+const PLAN_RETENTION_DAYS = 30
+
+/** 30 days after the last polled date (end of that UTC day). */
+function computeExpiresAtFromDateOptions(dateOptions: string[]): string {
+  const lastDate = [...dateOptions].sort().at(-1)
+  if (!lastDate) {
+    const fallback = new Date()
+    fallback.setUTCDate(fallback.getUTCDate() + PLAN_RETENTION_DAYS)
+    return fallback.toISOString()
+  }
+  const expires = new Date(`${lastDate}T23:59:59.999Z`)
+  expires.setUTCDate(expires.getUTCDate() + PLAN_RETENTION_DAYS)
+  return expires.toISOString()
+}
+
 function buildSlugBase(title: string): string {
   return (
     title
@@ -33,6 +48,8 @@ export async function POST(req: NextRequest) {
   }
 
   const slug = await generateSlug(title.trim())
+  const resolvedExpiresAt =
+    expires_at ?? computeExpiresAtFromDateOptions(date_options as string[])
 
   const { data, error } = await supabase
     .from('polls')
@@ -40,7 +57,7 @@ export async function POST(req: NextRequest) {
       title: title.trim(),
       creator_name: creator_name?.trim() || 'Someone',
       date_options,
-      expires_at,
+      expires_at: resolvedExpiresAt,
       slug,
     })
     .select()

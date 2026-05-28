@@ -3,11 +3,28 @@ import { NextRequest } from 'next/server'
 
 export const runtime = 'edge'
 
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text
+  return `${text.slice(0, max - 1).trimEnd()}…`
+}
+
+function titleFontSize(title: string): number {
+  if (title.length > 50) return 42
+  if (title.length > 40) return 48
+  return 60
+}
+
+function subFontSize(sub: string): number {
+  if (sub.length > 70) return 24
+  if (sub.length > 50) return 26
+  return 28
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const title = searchParams.get('title') ?? 'hangout-friends'
-  const sub = searchParams.get('sub') ?? ''
-  const cta = searchParams.get('cta') ?? 'Tap to respond'
+  const title = truncate(searchParams.get('title') ?? 'hangout-friends', 55)
+  const sub = truncate(searchParams.get('sub') ?? '', 90)
+  const cta = truncate(searchParams.get('cta') ?? 'Tap to respond', 24)
 
   return new ImageResponse(
     (
@@ -75,21 +92,32 @@ export async function GET(req: NextRequest) {
         </div>
 
         {/* Main content */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, justifyContent: 'center' }}>
           <div
             style={{
               color: '#ffffff',
-              fontSize: title.length > 40 ? '48px' : '60px',
+              fontSize: `${titleFontSize(title)}px`,
               fontWeight: 700,
               lineHeight: 1.1,
               letterSpacing: '-0.02em',
               maxWidth: '900px',
+              maxHeight: '140px',
+              overflow: 'hidden',
             }}
           >
             {title}
           </div>
           {sub && (
-            <div style={{ color: '#71717a', fontSize: '28px', lineHeight: 1.3, maxWidth: '800px' }}>
+            <div
+              style={{
+                color: '#71717a',
+                fontSize: `${subFontSize(sub)}px`,
+                lineHeight: 1.3,
+                maxWidth: '900px',
+                maxHeight: '72px',
+                overflow: 'hidden',
+              }}
+            >
               {sub}
             </div>
           )}
@@ -106,6 +134,10 @@ export async function GET(req: NextRequest) {
               padding: '14px 32px',
               borderRadius: '14px',
               letterSpacing: '0.01em',
+              maxWidth: '420px',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              textOverflow: 'ellipsis',
             }}
           >
             {cta}

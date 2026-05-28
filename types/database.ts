@@ -8,6 +8,11 @@ export type Database = {
           token: string
           created_at: string
           home_location: string | null
+          google_access_token: string | null
+          google_refresh_token: string | null
+          google_scope: string | null
+          google_token_type: string | null
+          google_expiry_date: number | null
         }
         Insert: {
           id?: string
@@ -15,6 +20,11 @@ export type Database = {
           token: string
           created_at?: string
           home_location?: string | null
+          google_access_token?: string | null
+          google_refresh_token?: string | null
+          google_scope?: string | null
+          google_token_type?: string | null
+          google_expiry_date?: number | null
         }
         Update: {
           id?: string
@@ -22,6 +32,11 @@ export type Database = {
           token?: string
           created_at?: string
           home_location?: string | null
+          google_access_token?: string | null
+          google_refresh_token?: string | null
+          google_scope?: string | null
+          google_token_type?: string | null
+          google_expiry_date?: number | null
         }
       }
       availability: {
@@ -182,6 +197,7 @@ export type Database = {
           scheduled_idea_id: string | null
           scheduled_slot_key: string | null
           expires_at: string | null
+          archived_at: string | null
           created_at: string
         }
       }
@@ -199,6 +215,38 @@ export type Database = {
           idea_id: string
           respondent_name: string
           created_at: string
+        }
+      }
+      push_subscriptions: {
+        Row: {
+          id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_id: string | null
+          device_id: string | null
+          plan_watches: { poll_id: string; role: 'creator' | 'rsvp'; respondent_name?: string }[]
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_id?: string | null
+          device_id?: string | null
+          plan_watches?: { poll_id: string; role: 'creator' | 'rsvp'; respondent_name?: string }[]
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          user_id?: string | null
+          device_id?: string | null
+          plan_watches?: { poll_id: string; role: 'creator' | 'rsvp'; respondent_name?: string }[]
+          created_at?: string
         }
       }
     }

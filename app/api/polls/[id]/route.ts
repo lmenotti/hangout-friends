@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
+import { getPlanIdentityFromCookies } from '@/lib/planIdentity'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const planIdentity = getPlanIdentityFromCookies(await cookies(), id)
 
   const { data: poll, error } = await supabase
     .from('polls')
@@ -40,5 +43,6 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     aggregate,
     rsvps: rsvps ?? [],
     scheduled_idea,
+    plan_identity: planIdentity,
   })
 }

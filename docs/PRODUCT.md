@@ -32,7 +32,7 @@ A Plan is the core unit. When someone creates a plan, they get a URL like `hango
 2. **Share** — User drops the URL in iMessage, Discord, group chat, etc. Rich link preview shows: plan name, who created it, current participant count, "tap to join."
 3. **Respond** — Recipients tap the link, land in mobile Safari (or open the PWA if installed), enter just their first name, and mark availability. This screen must be designed to be completable in under 30 seconds.
 4. **Build** — Anyone in the plan can add activity ideas. Anyone can upvote. Optional: location, duration, indoor/outdoor.
-5. **Lock** — The plan creator (or anyone, in unmanaged mode) clicks "auto-schedule." System picks the best (time, activity) combination based on availability and votes.
+5. **Lock** — The plan creator (or anyone, in unmanaged mode) clicks "auto-schedule." System picks the best (time, activity) combination based on availability, votes, and weather.
 6. **RSVP** — Everyone gets one final ping with the locked time and activity. Yes/Maybe/No.
 7. **Expire** — 30 days after the event date, the plan archives itself. Account holders who pin it can keep it forever.
 
@@ -80,7 +80,9 @@ A pod can create a plan that uses pod-member availability automatically, but the
 
 ### 5. Auto-schedule
 - Single button on the plan page.
-- Algorithm: find the (time slot, activity) pair where (a) the activity has 2+ upvotes, (b) all upvoters are available, (c) the most total people are available. Tiebreaker: earliest valid slot.
+- Algorithm considers 30-minute slots from 9am–9pm on each date in the poll. An idea must have 2+ upvotes; a slot counts only if every upvoter marked themselves available and the start time is still in the future.
+- Ranking among valid (slot, idea) pairs: (1) most total people available at that slot, (2) more upvotes on the idea, (3) better weather for outdoor ideas with a location — hourly forecast geocoded from the idea's location; rain and storms lower the rank; indoor ideas, ideas without a location, or missing forecast data score neutral, (4) earliest slot.
+- If the winning idea has a duration, the scheduled end time is set from the start slot.
 - Result: the plan transitions from "polling" to "scheduled." Everyone gets a notification (push if they have the PWA installed, otherwise nothing — no email spam).
 
 ### 6. RSVP

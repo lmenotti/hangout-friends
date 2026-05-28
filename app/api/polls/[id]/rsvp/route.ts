@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { appendPlanIdentityCookie, normalizePlanIdentityName } from '@/lib/planIdentity'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 
 const VALID = new Set(['yes', 'maybe', 'no'])
@@ -7,14 +8,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id: pollId } = await params
   const { respondent_name, status } = await req.json()
 
-  if (!respondent_name?.trim()) {
+  const name = normalizePlanIdentityName(respondent_name ?? '')
+  if (!name) {
     return NextResponse.json({ error: 'Name required' }, { status: 400 })
   }
   if (!VALID.has(status)) {
     return NextResponse.json({ error: 'Status must be yes, maybe, or no.' }, { status: 400 })
   }
-
-  const name = respondent_name.trim()
 
   const { data: poll } = await supabase.from('polls').select('status').eq('id', pollId).single()
   if (!poll) return NextResponse.json({ error: 'Poll not found' }, { status: 404 })
@@ -38,7 +38,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .select()
       .single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json(data)
+    const res = NextResponse.json(data)
+    appendPlanIdentityCookie(res, pollId, name)
+    return res
   }
 
   const { data, error } = await supabase
@@ -48,5 +50,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  const res = NextResponse.json(data)
+  appendPlanIdentityCookie(res, pollId, name)
+  return res
 }

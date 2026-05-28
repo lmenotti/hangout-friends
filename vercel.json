@@ -1,3 +1,13 @@
 {
-  "alias": ["hangout-friends.vercel.app"]
+  "alias": ["hangout-friends.vercel.app"],
+  "crons": [
+    {
+      "path": "/api/cron/expire-plans",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/event-reminders",
+      "schedule": "0 14 * * *"
+    }
+  ]
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { notifyPlanCreatorScheduled } from '@/lib/pushNotifications'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 import { findBestPollSchedule, formatScheduledLabel } from '@/lib/pollSchedule'
 
@@ -68,6 +69,8 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
   await supabase.from('ideas').update({ is_scheduled: true }).eq('id', best.ideaId)
+
+  void notifyPlanCreatorScheduled(pollId)
 
   return NextResponse.json({
     poll: updated,

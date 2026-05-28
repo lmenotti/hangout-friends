@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import PollGrid from '@/components/PollGrid'
+import PollGrid, { formatSlotLabel } from '@/components/PollGrid'
 import PollIdeasBoard, { type PollIdea } from '@/components/PollIdeasBoard'
 import { formatScheduledLabel } from '@/lib/pollSchedule'
 
@@ -38,10 +38,32 @@ export default function PollPageClient({ id }: { id: string }) {
   const [error, setError] = useState('')
   const [scheduling, setScheduling] = useState(false)
   const [rsvpSubmitting, setRsvpSubmitting] = useState(false)
+  const [inspectedSlot, setInspectedSlot] = useState<string | null>(null)
+  const [heatmapFilter, setHeatmapFilter] = useState<'all' | '80plus'>('all')
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const savedFadeRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const skipNextSaveRef = useRef(false)
+
+  const applyReturningIdentity = useCallback((
+    identity: string | null | undefined,
+    pollResponses: Response[],
+    pollStatus: Poll['status'] | undefined,
+  ) => {
+    if (!identity?.trim()) return
+    const trimmed = identity.trim()
+    setName(trimmed)
+    const existing = pollResponses.find(
+      r => r.respondent_name.toLowerCase() === trimmed.toLowerCase(),
+    )
+    if (!existing) return
+    skipNextSaveRef.current = true
+    const slots = new Set(
+      Object.entries(existing.availability).filter(([, v]) => v).map(([k]) => k),
+    )
+    setMySlots(slots)
+    if (pollStatus !== 'scheduled') setEditing(true)
+  }, [])
 
   const fetchPoll = useCallback(async () => {
     const res = await fetch(`/api/polls/${id}`)
@@ -52,7 +74,8 @@ export default function PollPageClient({ id }: { id: string }) {
     setAggregate(data.aggregate)
     setRsvps(data.rsvps ?? [])
     setScheduledIdea(data.scheduled_idea ?? null)
-  }, [id])
+    applyReturningIdentity(data.plan_identity, data.responses, data.poll?.status)
+  }, [id, applyReturningIdentity])
 
   const fetchIdeas = useCallback(async () => {
     const res = await fetch(`/api/polls/${id}/ideas`)
@@ -62,8 +85,6 @@ export default function PollPageClient({ id }: { id: string }) {
 
   useEffect(() => {
     Promise.all([fetchPoll(), fetchIdeas()]).finally(() => setLoading(false))
-    const stored = localStorage.getItem('poll_name')
-    if (stored) setName(stored)
 
     const storedTapMode = localStorage.getItem('poll_tap_mode')
     if (storedTapMode !== null) {
@@ -139,8 +160,8 @@ export default function PollPageClient({ id }: { id: string }) {
     })
   }, [])
 
-  const handleGridTap = () => {
-    if (editing || poll?.status === 'scheduled') return
+  const startEditing = () => {
+    if (poll?.status === 'scheduled') return
     if (name.trim()) {
       setEditing(true)
     } else {
@@ -148,10 +169,22 @@ export default function PollPageClient({ id }: { id: string }) {
     }
   }
 
+  const getSlotBreakdown = useCallback((slotKey: string) => {
+    const free: string[] = []
+    const notFree: string[] = []
+    for (const r of responses) {
+      if (r.availability?.[slotKey]) {
+        free.push(r.respondent_name)
+      } else {
+        notFree.push(r.respondent_name)
+      }
+    }
+    return { free, notFree }
+  }, [responses])
+
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
-    localStorage.setItem('poll_name', name.trim())
     setNameRequired(false)
     if (poll?.status !== 'scheduled') setEditing(true)
   }
@@ -228,6 +261,29 @@ export default function PollPageClient({ id }: { id: string }) {
     no: rsvps.filter(r => r.status === 'no'),
   }
 
+  const whosComing = [...rsvpGroups.yes, ...rsvpGroups.maybe]
+
+  const isSelfName = (respondentName: string) =>
+    !!name.trim() && respondentName.toLowerCase() === name.trim().toLowerCase()
+
+  const renderNameList = (names: string[], emptyLabel: string) => {
+    if (names.length === 0) {
+      return <span className="text-zinc-600">{emptyLabel}</span>
+    }
+    return (
+      <span>
+        {names.map((n, i) => (
+          <span key={n}>
+            {i > 0 && ', '}
+            <span className={isSelfName(n) ? 'text-indigo-300 font-medium' : 'text-zinc-300'}>{n}</span>
+          </span>
+        ))}
+      </span>
+    )
+  }
+
+  const inspectedBreakdown = inspectedSlot ? getSlotBreakdown(inspectedSlot) : null
+
   const isScheduled = poll?.status === 'scheduled'
   const scheduledLabel = poll?.scheduled_at
     ? formatScheduledLabel(new Date(poll.scheduled_at))
@@ -271,7 +327,12 @@ export default function PollPageClient({ id }: { id: string }) {
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm text-zinc-400">Are you coming?</p>
+            <p className="text-sm text-zinc-400">
+              Are you coming?
+              {myRsvp && (
+                <span className="text-indigo-300"> · You said {myRsvp}</span>
+              )}
+            </p>
             <div className="flex flex-wrap gap-2">
               {(['yes', 'maybe', 'no'] as const).map(status => (
                 <button
@@ -279,9 +340,14 @@ export default function PollPageClient({ id }: { id: string }) {
                   type="button"
                   disabled={rsvpSubmitting}
                   onClick={() => handleRsvp(status)}
-                  className={`px-4 py-2.5 rounded-xl text-sm font-medium capitalize transition-colors touch-manipulation min-h-[44px] ${
+                  aria-pressed={myRsvp === status}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-medium capitalize transition-colors touch-manipulation min-h-[44px] min-w-[72px] ${
                     myRsvp === status
-                      ? 'bg-indigo-600 text-white'
+                      ? status === 'yes'
+                        ? 'bg-teal-600 text-white ring-2 ring-teal-400/60'
+                        : status === 'maybe'
+                          ? 'bg-indigo-600 text-white ring-2 ring-indigo-400/60'
+                          : 'bg-zinc-600 text-white ring-2 ring-zinc-400/60'
                       : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                   } disabled:opacity-40`}
                 >
@@ -291,11 +357,45 @@ export default function PollPageClient({ id }: { id: string }) {
             </div>
           </div>
 
-          {rsvps.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 text-xs text-zinc-500 pt-1">
-              <div><span className="text-teal-400 font-medium">{rsvpGroups.yes.length}</span> yes</div>
-              <div><span className="text-zinc-400 font-medium">{rsvpGroups.maybe.length}</span> maybe</div>
-              <div><span className="text-zinc-500 font-medium">{rsvpGroups.no.length}</span> no</div>
+          {(whosComing.length > 0 || rsvps.length > 0) && (
+            <div className="space-y-3 pt-2 border-t border-teal-800/40">
+              {whosComing.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-teal-400 mb-1.5">Who&apos;s coming</p>
+                  <p className="text-sm leading-relaxed">
+                    {whosComing.map((r, i) => (
+                      <span key={r.respondent_name}>
+                        {i > 0 && ', '}
+                        <span className={isSelfName(r.respondent_name) ? 'text-indigo-300 font-medium' : 'text-zinc-100'}>
+                          {r.respondent_name}
+                          {r.status === 'maybe' && <span className="text-zinc-500 font-normal"> (maybe)</span>}
+                        </span>
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-3 text-sm">
+                <div>
+                  <p className="text-xs font-medium text-teal-400 mb-1">
+                    Yes <span className="text-zinc-500">({rsvpGroups.yes.length})</span>
+                  </p>
+                  <p className="text-sm leading-relaxed">{renderNameList(rsvpGroups.yes.map(r => r.respondent_name), 'No one yet')}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-zinc-400 mb-1">
+                    Maybe <span className="text-zinc-500">({rsvpGroups.maybe.length})</span>
+                  </p>
+                  <p className="text-sm leading-relaxed">{renderNameList(rsvpGroups.maybe.map(r => r.respondent_name), 'No one yet')}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-zinc-500 mb-1">
+                    No <span className="text-zinc-600">({rsvpGroups.no.length})</span>
+                  </p>
+                  <p className="text-sm leading-relaxed">{renderNameList(rsvpGroups.no.map(r => r.respondent_name), 'No one yet')}</p>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -354,6 +454,18 @@ export default function PollPageClient({ id }: { id: string }) {
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
+      {!isScheduled && !editing && (
+        <button
+          type="button"
+          onClick={startEditing}
+          className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors touch-manipulation min-h-[48px]"
+        >
+          {responses.find(r => r.respondent_name.toLowerCase() === name.trim().toLowerCase())
+            ? 'Edit my availability'
+            : 'Mark your availability'}
+        </button>
+      )}
+
       {!isScheduled && editing && (
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-zinc-500">
@@ -378,11 +490,23 @@ export default function PollPageClient({ id }: { id: string }) {
         </div>
       )}
 
-      <div
-        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 overflow-x-auto"
-        onClick={!editing && !isScheduled ? handleGridTap : undefined}
-        style={!editing && !isScheduled ? { cursor: 'pointer' } : undefined}
-      >
+      {!isScheduled && responses.length > 0 && !editing && (
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={() => setHeatmapFilter(f => f === 'all' ? '80plus' : 'all')}
+            className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-colors touch-manipulation min-h-[44px] border ${
+              heatmapFilter === '80plus'
+                ? 'bg-teal-950/60 border-teal-700 text-teal-300'
+                : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            {heatmapFilter === '80plus' ? 'Showing 80%+ free' : 'Highlight 80%+ free'}
+          </button>
+        </div>
+      )}
+
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 overflow-x-auto">
         <PollGrid
           dates={poll.date_options}
           mySlots={mySlots}
@@ -391,12 +515,17 @@ export default function PollPageClient({ id }: { id: string }) {
           editing={editing && !isScheduled}
           onToggle={handleToggle}
           tapMode={tapMode}
+          onCellInspect={!editing && responses.length > 0 ? setInspectedSlot : undefined}
+          highlightThreshold={heatmapFilter === '80plus' ? 0.8 : null}
         />
         {!editing && !isScheduled && (
           <p className="text-center text-xs text-zinc-600 mt-3">
-            {responses.find(r => r.respondent_name.toLowerCase() === name.trim().toLowerCase())
-              ? 'Tap to edit your response'
-              : 'Tap to mark your availability'}
+            Tap a cell to see who&apos;s free · Use the button above to mark your times
+          </p>
+        )}
+        {!editing && isScheduled && responses.length > 0 && (
+          <p className="text-center text-xs text-zinc-600 mt-3">
+            Tap a cell to see who&apos;s free
           </p>
         )}
       </div>
@@ -469,6 +598,82 @@ export default function PollPageClient({ id }: { id: string }) {
           </div>
         )}
       </div>
+
+      {inspectedSlot && inspectedBreakdown && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="slot-inspect-title"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60"
+            aria-label="Close"
+            onClick={() => setInspectedSlot(null)}
+          />
+          <div className="relative w-full sm:max-w-md bg-zinc-900 border border-zinc-800 rounded-t-2xl sm:rounded-2xl p-5 pb-8 sm:pb-5 shadow-xl max-h-[85vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Availability</p>
+                <h2 id="slot-inspect-title" className="text-base font-semibold text-zinc-100 mt-0.5">
+                  {formatSlotLabel(inspectedSlot)}
+                </h2>
+                <p className="text-xs text-zinc-500 mt-1">
+                  {inspectedBreakdown.free.length} of {responses.length} free
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectedSlot(null)}
+                className="px-3 py-2.5 rounded-xl text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors touch-manipulation min-h-[44px]"
+              >
+                Done
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-medium text-teal-400 mb-1.5">
+                  Free ({inspectedBreakdown.free.length})
+                </p>
+                {inspectedBreakdown.free.length > 0 ? (
+                  <ul className="space-y-1">
+                    {inspectedBreakdown.free.map(n => (
+                      <li key={n} className={`text-sm ${isSelfName(n) ? 'text-indigo-300 font-medium' : 'text-zinc-200'}`}>
+                        {n}{isSelfName(n) ? ' (you)' : ''}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-zinc-600">No one marked free for this slot</p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-zinc-500 mb-1.5">
+                  Not free ({inspectedBreakdown.notFree.length})
+                </p>
+                {inspectedBreakdown.notFree.length > 0 ? (
+                  <ul className="space-y-1">
+                    {inspectedBreakdown.notFree.map(n => (
+                      <li key={n} className={`text-sm ${isSelfName(n) ? 'text-indigo-300/80 font-medium' : 'text-zinc-400'}`}>
+                        {n}{isSelfName(n) ? ' (you)' : ''}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-zinc-600">Everyone who responded is free</p>
+                )}
+              </div>
+
+              {responses.length === 0 && (
+                <p className="text-sm text-zinc-600">No responses yet</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

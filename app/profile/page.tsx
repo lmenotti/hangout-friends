@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
@@ -13,6 +13,43 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null)
+  const [calendarLoading, setCalendarLoading] = useState(false)
+  const [calendarMessage, setCalendarMessage] = useState('')
+
+  useEffect(() => {
+    if (!token) return
+
+    fetch('/api/calendar/sync', { headers: { 'x-user-token': token } })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (data && typeof data.connected === 'boolean') {
+          setCalendarConnected(data.connected)
+        }
+      })
+      .catch(() => setCalendarConnected(false))
+  }, [token])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const status = params.get('calendar')
+    if (!status) return
+
+    const messages: Record<string, string> = {
+      connected: 'Google Calendar connected.',
+      denied: 'Google Calendar connection was cancelled.',
+      error: 'Could not connect Google Calendar. Try again.',
+      unavailable: 'Google Calendar is not available in this environment.',
+      'sign-in-required': 'Sign in before connecting Google Calendar.',
+    }
+
+    if (messages[status]) {
+      setCalendarMessage(messages[status])
+      if (status === 'connected') setCalendarConnected(true)
+    }
+
+    router.replace('/profile')
+  }, [router])
 
   if (!user) {
     return (
@@ -47,6 +84,30 @@ export default function ProfilePage() {
   const handleSignOut = () => {
     clearUser()
     router.push('/')
+  }
+
+  const handleConnectCalendar = () => {
+    window.location.href = '/api/google/auth'
+  }
+
+  const handleDisconnectCalendar = async () => {
+    if (!token) return
+    setCalendarLoading(true)
+    setCalendarMessage('')
+    try {
+      const res = await fetch('/api/calendar/sync', {
+        method: 'DELETE',
+        headers: { 'x-user-token': token },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Disconnect failed')
+      setCalendarConnected(false)
+      setCalendarMessage('Google Calendar disconnected.')
+    } catch (err: unknown) {
+      setCalendarMessage(err instanceof Error ? err.message : 'Disconnect failed')
+    } finally {
+      setCalendarLoading(false)
+    }
   }
 
   return (
@@ -85,6 +146,47 @@ export default function ProfilePage() {
           >
             {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save location'}
           </button>
+        </div>
+
+        {/* Google Calendar */}
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 space-y-3">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Google Calendar</p>
+            <p className="mt-0.5 text-xs text-zinc-600">
+              Read-only sync to pre-fill unavailable times when you respond to plans.
+            </p>
+          </div>
+          {calendarMessage && (
+            <p className={`text-xs ${calendarMessage.includes('Could not') || calendarMessage.includes('cancelled') || calendarMessage.includes('not available') ? 'text-amber-400' : 'text-emerald-400'}`}>
+              {calendarMessage}
+            </p>
+          )}
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-zinc-300">
+              {calendarConnected === null
+                ? 'Checking connection…'
+                : calendarConnected
+                  ? 'Connected'
+                  : 'Not connected'}
+            </p>
+            {calendarConnected === null ? null : calendarConnected ? (
+              <button
+                onClick={handleDisconnectCalendar}
+                disabled={calendarLoading}
+                className="shrink-0 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800 disabled:opacity-40 transition-colors touch-manipulation"
+              >
+                {calendarLoading ? 'Disconnecting…' : 'Disconnect'}
+              </button>
+            ) : (
+              <button
+                onClick={handleConnectCalendar}
+                disabled={calendarLoading}
+                className="shrink-0 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40 transition-colors touch-manipulation"
+              >
+                Connect Google Calendar
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Links & actions */}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 
 const START_HOUR = 9
 const END_HOUR = 21
@@ -12,8 +12,17 @@ function hourLabel(h: number) {
   return `${h - 12}pm`
 }
 
-function slotKey(date: string, hour: number, minute: 0 | 30) {
+export function slotKey(date: string, hour: number, minute: 0 | 30) {
   return `${date}-${hour}-${minute}`
+}
+
+export function formatSlotLabel(key: string): string {
+  const parts = key.split('-')
+  const date = parts.slice(0, 3).join('-')
+  const hour = parseInt(parts[3], 10)
+  const minute = parseInt(parts[4], 10) as 0 | 30
+  return new Date(`${date}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`)
+    .toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
 const ALL_SLOTS: { hour: number; minute: 0 | 30 }[] = []
@@ -46,9 +55,21 @@ type Props = {
   editing: boolean
   onToggle: (key: string, adding: boolean) => void
   tapMode?: boolean
+  onCellInspect?: (key: string) => void
+  highlightThreshold?: number | null
 }
 
-export default function PollGrid({ dates, mySlots, aggregate, totalResponders, editing, onToggle, tapMode = false }: Props) {
+export default function PollGrid({
+  dates,
+  mySlots,
+  aggregate,
+  totalResponders,
+  editing,
+  onToggle,
+  tapMode = false,
+  onCellInspect,
+  highlightThreshold = null,
+}: Props) {
   const paintingRef = useRef<boolean | null>(null)
   const touchActiveRef = useRef(false)
 
@@ -133,23 +154,53 @@ export default function PollGrid({ dates, mySlots, aggregate, totalResponders, e
             const key = slotKey(date, hour, minute)
             const count = aggregate[key] ?? 0
             const isMe = mySlots.has(key)
+            const ratio = totalResponders > 0 ? count / totalResponders : 0
+            const meetsThreshold = highlightThreshold === null || ratio >= highlightThreshold
+            const inspectable = !editing && !!onCellInspect
 
             let cellClass = 'bg-zinc-800'
             if (count > 0 && totalResponders > 0) {
-              cellClass = ratioToColor(count / totalResponders)
+              cellClass = ratioToColor(ratio)
             }
             if (isMe && editing) cellClass = 'bg-indigo-500'
+            if (!meetsThreshold && highlightThreshold !== null) {
+              cellClass = 'bg-zinc-900 opacity-30'
+            }
+
+            const handleInspect = inspectable
+              ? (e: React.MouseEvent) => {
+                  e.stopPropagation()
+                  onCellInspect(key)
+                }
+              : undefined
 
             return (
               <div
                 key={key}
                 data-cell={key}
-                className={`mx-px min-h-[44px] h-11 rounded-sm transition-colors duration-75 ${cellClass} ${editing ? 'cursor-pointer touch-manipulation' : ''}`}
+                role={inspectable ? 'button' : undefined}
+                tabIndex={inspectable ? 0 : undefined}
+                aria-label={inspectable ? `View availability for ${formatSlotLabel(key)}` : undefined}
+                className={`mx-px min-h-[44px] h-11 rounded-sm transition-colors duration-75 ${cellClass} ${
+                  editing || inspectable ? 'cursor-pointer touch-manipulation' : ''
+                }`}
                 onMouseDown={tapMode ? undefined : () => onMouseDown(key)}
                 onMouseEnter={tapMode ? undefined : () => onMouseEnter(key)}
-                onClick={tapMode && editing ? () => onToggle(key, !mySlots.has(key)) : undefined}
+                onClick={
+                  inspectable
+                    ? handleInspect
+                    : tapMode && editing
+                      ? () => onToggle(key, !mySlots.has(key))
+                      : undefined
+                }
+                onKeyDown={inspectable ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onCellInspect(key)
+                  }
+                } : undefined}
               >
-                {count > 0 && !editing && (
+                {count > 0 && !editing && meetsThreshold && (
                   <span className="text-[10px] text-white/80 float-right pr-1 leading-[44px]">{count}</span>
                 )}
               </div>
