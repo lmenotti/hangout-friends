@@ -1,6 +1,7 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import type { UserPublic } from '@/types/database'
 
 const COOKIE_NAME = 'gs_token'
@@ -28,7 +29,7 @@ type UserContextType = {
   setUser: (user: UserPublic, token: string) => void
   updateUser: (user: UserPublic) => void
   clearUser: () => void
-  showSignIn: () => void
+  showSignIn: (returnTo?: string) => void
   hideSignIn: () => void
 }
 
@@ -45,6 +46,7 @@ const UserContext = createContext<UserContextType>({
 })
 
 export function UserProvider({ children }: { children: ReactNode }) {
+  const router = useRouter()
   const [user, setUserState] = useState<UserPublic | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -93,8 +95,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setToken(null)
   }
 
-  const showSignIn = () => setSignInOpen(true)
+  const showSignIn = useCallback((returnTo?: string) => {
+    const query = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''
+    router.push(`/auth/signin${query}`)
+  }, [router])
+
+  const showLegacySignIn = useCallback(() => setSignInOpen(true), [])
   const hideSignIn = () => setSignInOpen(false)
+
+  useEffect(() => {
+    const onLegacySignIn = () => showLegacySignIn()
+    window.addEventListener('hangout:legacy-signin', onLegacySignIn)
+    return () => window.removeEventListener('hangout:legacy-signin', onLegacySignIn)
+  }, [showLegacySignIn])
 
   return (
     <UserContext.Provider value={{ user, token, loading, signInOpen, setUser, updateUser, clearUser, showSignIn, hideSignIn }}>

@@ -6,6 +6,7 @@ export type Database = {
           id: string
           name: string
           token: string
+          email: string | null
           created_at: string
           home_location: string | null
           google_access_token: string | null
@@ -18,6 +19,7 @@ export type Database = {
           id?: string
           name: string
           token: string
+          email?: string | null
           created_at?: string
           home_location?: string | null
           google_access_token?: string | null
@@ -30,6 +32,7 @@ export type Database = {
           id?: string
           name?: string
           token?: string
+          email?: string | null
           created_at?: string
           home_location?: string | null
           google_access_token?: string | null
@@ -37,6 +40,38 @@ export type Database = {
           google_scope?: string | null
           google_token_type?: string | null
           google_expiry_date?: number | null
+        }
+      }
+      magic_link_tokens: {
+        Row: {
+          id: string
+          token: string
+          email: string
+          name: string | null
+          return_to: string | null
+          expires_at: string
+          used_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          token: string
+          email: string
+          name?: string | null
+          return_to?: string | null
+          expires_at: string
+          used_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          token?: string
+          email?: string
+          name?: string | null
+          return_to?: string | null
+          expires_at?: string
+          used_at?: string | null
+          created_at?: string
         }
       }
       availability: {
@@ -256,7 +291,7 @@ export type Database = {
 export type User = Database['public']['Tables']['users']['Row']
 
 /** API-safe user shape returned from GET /api/users (no Google secrets). */
-export type UserPublic = Pick<User, 'id' | 'name' | 'token' | 'created_at' | 'home_location'> & {
+export type UserPublic = Pick<User, 'id' | 'name' | 'token' | 'created_at' | 'home_location' | 'email'> & {
   google_calendar_connected?: boolean
 }
 export type Idea = Database['public']['Tables']['ideas']['Row']

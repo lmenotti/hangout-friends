@@ -7,7 +7,7 @@ import { useUser } from '@/context/UserContext'
 type Pod = { id: string; name: string; invite_code: string; member_count: number; role: string; created_at: string }
 
 export default function PodsPage() {
-  const { user, token, showSignIn } = useUser()
+  const { user, token } = useUser()
   const [pods, setPods] = useState<Pod[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -25,9 +25,9 @@ export default function PodsPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
         <p className="text-zinc-400 text-sm">Sign in to view and create pods.</p>
-        <button onClick={showSignIn} className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
+        <Link href="/auth/signin?returnTo=/pods" className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
           Sign in
-        </button>
+        </Link>
       </div>
     )
   }

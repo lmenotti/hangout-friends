@@ -77,6 +77,7 @@ export default function NewPollPage() {
       const res = await fetch('/api/polls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({
           title: title.trim(),
           creator_name: creatorName.trim(),
@@ -85,7 +86,7 @@ export default function NewPollPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      router.push(`/p/${data.slug}`)
+      router.push(`/p/${data.slug}?fill=1`)
     } catch (err: any) {
       setError(err.message)
       setSubmitting(false)

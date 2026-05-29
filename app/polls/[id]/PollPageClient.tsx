@@ -21,7 +21,34 @@ type PollRsvp = { respondent_name: string; status: 'yes' | 'maybe' | 'no' }
 type ScheduledIdea = { id: string; title: string; location: string | null }
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
-export default function PollPageClient({ id }: { id: string }) {
+type SchedulePickerOption = {
+  rank: number
+  idea_id: string
+  idea_title: string
+  slot_key: string
+  scheduled_at: string
+  reason: string
+  voter_count: number
+  total_available: number
+}
+
+function computeAggregate(responses: Response[]): Record<string, number> {
+  const aggregate: Record<string, number> = {}
+  for (const r of responses) {
+    for (const [slot, free] of Object.entries(r.availability ?? {})) {
+      if (free) aggregate[slot] = (aggregate[slot] ?? 0) + 1
+    }
+  }
+  return aggregate
+}
+
+export default function PollPageClient({
+  id,
+  autoFillAvailability = false,
+}: {
+  id: string
+  autoFillAvailability?: boolean
+}) {
   const [poll, setPoll] = useState<Poll | null>(null)
   const [scheduledIdea, setScheduledIdea] = useState<ScheduledIdea | null>(null)
   const [responses, setResponses] = useState<Response[]>([])
@@ -38,6 +65,8 @@ export default function PollPageClient({ id }: { id: string }) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [error, setError] = useState('')
   const [scheduling, setScheduling] = useState(false)
+  const [scheduleOptions, setScheduleOptions] = useState<SchedulePickerOption[] | null>(null)
+  const [selectedScheduleKey, setSelectedScheduleKey] = useState<string | null>(null)
   const [rsvpSubmitting, setRsvpSubmitting] = useState(false)
   const [inspectedSlot, setInspectedSlot] = useState<string | null>(null)
   const [heatmapFilter, setHeatmapFilter] = useState<'all' | '80plus'>('all')
@@ -45,37 +74,50 @@ export default function PollPageClient({ id }: { id: string }) {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const savedFadeRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const skipNextSaveRef = useRef(false)
+  const saveInFlightRef = useRef(false)
+  const identityHydratedRef = useRef(false)
+  const openFillFromCreateRef = useRef(autoFillAvailability)
 
   const applyReturningIdentity = useCallback((
     identity: string | null | undefined,
     pollResponses: Response[],
-    pollStatus: Poll['status'] | undefined,
   ) => {
-    if (!identity?.trim()) return
+    if (!identity?.trim() || identityHydratedRef.current) return
+    identityHydratedRef.current = true
+
     const trimmed = identity.trim()
     setName(trimmed)
+
     const existing = pollResponses.find(
       r => r.respondent_name.toLowerCase() === trimmed.toLowerCase(),
     )
-    if (!existing) return
-    skipNextSaveRef.current = true
-    const slots = new Set(
-      Object.entries(existing.availability).filter(([, v]) => v).map(([k]) => k),
-    )
-    setMySlots(slots)
-    if (pollStatus !== 'scheduled') setEditing(true)
+    if (existing) {
+      skipNextSaveRef.current = true
+      const slots = new Set(
+        Object.entries(existing.availability).filter(([, v]) => v).map(([k]) => k),
+      )
+      setMySlots(slots)
+    }
   }, [])
 
-  const fetchPoll = useCallback(async () => {
+  const fetchPoll = useCallback(async (options?: { heatmapOnly?: boolean }) => {
     const res = await fetch(`/api/polls/${id}`)
     if (!res.ok) return
     const data = await res.json()
+
+    if (options?.heatmapOnly) {
+      setResponses(data.responses)
+      setAggregate(data.aggregate)
+      setRsvps(data.rsvps ?? [])
+      return
+    }
+
     setPoll(data.poll)
     setResponses(data.responses)
     setAggregate(data.aggregate)
     setRsvps(data.rsvps ?? [])
     setScheduledIdea(data.scheduled_idea ?? null)
-    applyReturningIdentity(data.plan_identity, data.responses, data.poll?.status)
+    applyReturningIdentity(data.plan_identity, data.responses)
   }, [id, applyReturningIdentity])
 
   const fetchIdeas = useCallback(async () => {
@@ -95,42 +137,57 @@ export default function PollPageClient({ id }: { id: string }) {
     }
   }, [fetchPoll, fetchIdeas])
 
+  // After plan creation (?fill=1), open the grid once identity cookie + name are ready.
   useEffect(() => {
+    if (!openFillFromCreateRef.current || loading || poll?.status === 'scheduled') return
     if (!name.trim()) return
-    const existing = responses.find(r => r.respondent_name.toLowerCase() === name.trim().toLowerCase())
-    if (existing) {
-      skipNextSaveRef.current = true
-      const slots = new Set(Object.entries(existing.availability).filter(([, v]) => v).map(([k]) => k))
-      setMySlots(slots)
-    }
-  }, [name, responses])
+    openFillFromCreateRef.current = false
+    setEditing(true)
+  }, [loading, name, poll?.status])
 
   const persistAvailability = useCallback(async (slots: Set<string>, respondentName: string) => {
-    if (!respondentName.trim()) return
+    if (!respondentName.trim() || saveInFlightRef.current) return
 
+    saveInFlightRef.current = true
     setSaveStatus('saving')
     setError('')
 
     const availability: Record<string, boolean> = {}
     for (const key of slots) availability[key] = true
 
-    const res = await fetch(`/api/polls/${id}/respond`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ respondent_name: respondentName.trim(), availability }),
-    })
+    try {
+      const res = await fetch(`/api/polls/${id}/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ respondent_name: respondentName.trim(), availability }),
+      })
 
-    if (res.ok) {
-      await fetchPoll()
-      setSaveStatus('saved')
-      clearTimeout(savedFadeRef.current)
-      savedFadeRef.current = setTimeout(() => setSaveStatus('idle'), 2000)
-    } else {
-      const data = await res.json()
-      setError(data.error ?? 'Could not save your availability.')
-      setSaveStatus('error')
+      if (res.ok) {
+        const saved = (await res.json()) as Response
+        setResponses(prev => {
+          const idx = prev.findIndex(
+            r => r.id === saved.id
+              || r.respondent_name.toLowerCase() === saved.respondent_name.toLowerCase(),
+          )
+          const next = [...prev]
+          if (idx >= 0) next[idx] = saved
+          else next.push(saved)
+          setAggregate(computeAggregate(next))
+          return next
+        })
+        setSaveStatus('saved')
+        clearTimeout(savedFadeRef.current)
+        savedFadeRef.current = setTimeout(() => setSaveStatus('idle'), 2000)
+      } else {
+        const data = await res.json()
+        setError(data.error ?? 'Could not save your availability.')
+        setSaveStatus('error')
+      }
+    } finally {
+      saveInFlightRef.current = false
     }
-  }, [id, fetchPoll])
+  }, [id])
 
   useEffect(() => {
     if (!editing || !name.trim() || poll?.status === 'scheduled') return
@@ -142,7 +199,7 @@ export default function PollPageClient({ id }: { id: string }) {
     clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = setTimeout(() => {
       void persistAvailability(mySlots, name.trim())
-    }, 400)
+    }, 900)
 
     return () => clearTimeout(saveTimeoutRef.current)
   }, [mySlots, editing, name, poll?.status, persistAvailability])
@@ -190,16 +247,48 @@ export default function PollPageClient({ id }: { id: string }) {
     if (poll?.status !== 'scheduled') setEditing(true)
   }
 
+  const scheduleOptionKey = (option: SchedulePickerOption) =>
+    `${option.idea_id}:${option.slot_key}`
+
   const handleAutoSchedule = async () => {
     setScheduling(true)
     setError('')
+    setScheduleOptions(null)
+    setSelectedScheduleKey(null)
     try {
       const res = await fetch(`/api/polls/${id}/schedule`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
+      const options = (data.candidates ?? []) as SchedulePickerOption[]
+      if (options.length === 0) throw new Error('No schedule options found')
+      setScheduleOptions(options)
+      setSelectedScheduleKey(scheduleOptionKey(options[0]))
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not load schedule options')
+    } finally {
+      setScheduling(false)
+    }
+  }
+
+  const handleConfirmSchedule = async () => {
+    const selected = scheduleOptions?.find(o => scheduleOptionKey(o) === selectedScheduleKey)
+    if (!selected) return
+
+    setScheduling(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/polls/${id}/schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slot_key: selected.slot_key, idea_id: selected.idea_id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setScheduleOptions(null)
+      setSelectedScheduleKey(null)
       await Promise.all([fetchPoll(), fetchIdeas()])
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Could not auto-schedule')
+      setError(err instanceof Error ? err.message : 'Could not confirm schedule')
     } finally {
       setScheduling(false)
     }
@@ -586,17 +675,80 @@ export default function PollPageClient({ id }: { id: string }) {
             onNeedName={() => setNameRequired(true)}
           />
 
-          <button
-            type="button"
-            onClick={handleAutoSchedule}
-            disabled={scheduling || ideas.length === 0 || responses.length === 0}
-            className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-medium transition-colors touch-manipulation min-h-[48px]"
-          >
-            {scheduling ? 'Scheduling…' : 'Auto-schedule best time'}
-          </button>
-          <p className="text-xs text-zinc-600 text-center -mt-4">
-            Picks the time + activity with the most overlap (needs ideas with 2+ votes).
-          </p>
+          {!scheduleOptions ? (
+            <button
+              type="button"
+              onClick={handleAutoSchedule}
+              disabled={scheduling || ideas.length === 0 || responses.length === 0}
+              className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-medium transition-colors touch-manipulation min-h-[48px]"
+            >
+              {scheduling ? 'Finding options…' : 'Auto-schedule'}
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-medium text-zinc-300">Pick a time</h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScheduleOptions(null)
+                    setSelectedScheduleKey(null)
+                  }}
+                  className="px-3 py-2.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors touch-manipulation min-h-[44px]"
+                >
+                  Cancel
+                </button>
+              </div>
+              <ul className="space-y-2">
+                {scheduleOptions.map(option => {
+                  const key = scheduleOptionKey(option)
+                  const selected = selectedScheduleKey === key
+                  const timeLabel = formatScheduledLabel(new Date(option.scheduled_at))
+                  return (
+                    <li key={key}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedScheduleKey(key)}
+                        aria-pressed={selected}
+                        className={`w-full text-left rounded-2xl border px-4 py-3.5 transition-colors touch-manipulation min-h-[44px] ${
+                          selected
+                            ? 'border-indigo-500 bg-indigo-950/50 ring-2 ring-indigo-500/40'
+                            : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-zinc-100">{option.idea_title}</p>
+                            <p className="text-sm text-zinc-400 mt-0.5">{timeLabel}</p>
+                            <p className="text-xs text-zinc-500 mt-1.5">{option.reason}</p>
+                          </div>
+                          <span className="shrink-0 text-xs font-medium text-indigo-300 tabular-nums">
+                            #{option.rank}
+                          </span>
+                        </div>
+                        <p className="text-xs text-teal-400/90 mt-2">
+                          {option.total_available} free · {option.voter_count} voted
+                        </p>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+              <button
+                type="button"
+                onClick={handleConfirmSchedule}
+                disabled={scheduling || !selectedScheduleKey}
+                className="w-full py-3.5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white text-sm font-medium transition-colors touch-manipulation min-h-[48px]"
+              >
+                {scheduling ? 'Locking in…' : 'Confirm this time'}
+              </button>
+            </div>
+          )}
+          {!scheduleOptions && (
+            <p className="text-xs text-zinc-600 text-center -mt-4">
+              Shows top matches by overlap (needs ideas with 2+ votes).
+            </p>
+          )}
         </>
       )}
 

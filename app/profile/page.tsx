@@ -46,8 +46,14 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <main className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
-        <p className="text-zinc-500 text-sm">Sign in to view your profile.</p>
+      <main className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 px-4 pb-24">
+        <p className="text-zinc-500 text-sm text-center">Sign in to view your profile, connect calendar, and manage pods.</p>
+        <Link
+          href="/auth/signin?returnTo=/profile"
+          className="px-5 py-3 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors touch-manipulation"
+        >
+          Sign in with email
+        </Link>
       </main>
     )
   }
@@ -120,7 +126,13 @@ export default function ProfilePage() {
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 space-y-1">
           <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Name</p>
           <p className="text-base font-medium text-zinc-100">{user.name}</p>
-          <p className="text-xs text-zinc-600">Name can&apos;t be changed here. Ask an admin.</p>
+          {user.email && (
+            <>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 pt-2">Email</p>
+              <p className="text-sm text-zinc-300">{user.email}</p>
+            </>
+          )}
+          <p className="text-xs text-zinc-600 pt-1">Name can&apos;t be changed here. Ask an admin.</p>
         </div>
 
         {/* Home location */}

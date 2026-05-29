@@ -82,9 +82,18 @@ async function main() {
   }
   console.log('✓ Alice and Bob upvoted the idea')
 
-  // 4. Auto-schedule
-  const schedule = await req(`/api/polls/${pollId}/schedule`, { method: 'POST' })
-  assert(schedule.ok, `Auto-schedule failed (${schedule.status}): ${schedule.text}`)
+  // 4. Auto-schedule (preview candidates, then confirm)
+  const preview = await req(`/api/polls/${pollId}/schedule`, { method: 'POST' })
+  assert(preview.ok, `Schedule preview failed (${preview.status}): ${preview.text}`)
+  assert(preview.json.candidates?.length >= 1, 'Expected at least one schedule candidate')
+  const pick = preview.json.candidates[0]
+  console.log(`✓ Schedule preview: ${preview.json.candidates.length} option(s), top: ${pick.reason}`)
+
+  const schedule = await req(`/api/polls/${pollId}/schedule`, {
+    method: 'POST',
+    body: JSON.stringify({ slot_key: pick.slot_key, idea_id: pick.idea_id }),
+  })
+  assert(schedule.ok, `Auto-schedule confirm failed (${schedule.status}): ${schedule.text}`)
   assert(schedule.json.poll?.status === 'scheduled', 'Poll status should be scheduled')
   console.log(`✓ Auto-scheduled: ${schedule.json.message}`)
 

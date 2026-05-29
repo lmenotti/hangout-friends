@@ -10,9 +10,11 @@ Hangout is a link-first group scheduling app for college friend groups. Live at 
 Before doing any non-trivial work, read these in order:
 1. `docs/GOALS.md` — strategy, why we're building this, kill criteria
 2. `docs/PRODUCT.md` — what the app *should* be (v1 blueprint, design principles, what's explicitly out of scope)
-3. `docs/README.md` — current implementation overview
-4. `docs/GOOGLE_CALENDAR.md` — if touching Calendar OAuth, pre-fill (HGT-29/34), or deferred QA
-5. `docs/audits/README.md` — Nov 2025 audits; verify against current code (OAuth section is stale)
+3. `docs/README.md` — current implementation overview and active priorities
+4. `docs/AGENT_WORK.md` — if doing MVP follow-up (Sprint 4 QA or Wave 4 code); contains agent prompts
+5. `docs/GOOGLE_CALENDAR.md` — if touching Calendar OAuth, pre-fill (HGT-29/34), or deferred QA
+
+Do **not** use `docs/archive/` for current behavior — those files are historical (Nov 2025 audits, completed wave plan).
 
 If a request conflicts with PRODUCT.md, flag the conflict before proceeding. Don't silently override the blueprint.
 
@@ -70,7 +72,7 @@ node scripts/migrate.mjs   # run migrations manually
 
 ## Required environment variables
 
-See README.md. Don't commit `.env.local` or any file containing real keys.
+See `docs/README.md` (environment variables). Don't commit `.env.local` or any file containing real keys.
 
 ## When making changes
 

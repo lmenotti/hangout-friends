@@ -13,7 +13,7 @@ Update manually in [Linear](https://linear.app/hangout-friends) (or `node script
 | Issue | Suggested status | Notes |
 |-------|------------------|-------|
 | **HGT-34** | **Done** / In Review | OAuth + token storage + Profile connect/disconnect shipped on `main`. Localhost verified. Production smoke test deferred. |
-| **HGT-29** | **Todo** / In Progress | `listBusyTimes` + `GET /api/calendar/sync?timeMin&timeMax` exist; plan grid pre-fill **not wired** in UI. |
+| **HGT-29** | **Done** (verify UI) | OAuth + `listBusyTimes` shipped; confirm plan grid pre-fill in UI before re-implementing. |
 | **HGT-30** | **Done** | ICS export — `/api/polls/[id]/ics` (cloud agent, merged to `main`). |
 
 ---
@@ -69,6 +69,6 @@ Update manually in [Linear](https://linear.app/hangout-friends) (or `node script
 
 ## Historical note
 
-Nov 2025 audits (`docs/audits/051126_*.md`) describe OAuth as missing — stale. See [audits/README.md](./audits/README.md).
+Nov 2025 audits (`docs/archive/audits/051126_*.md`) describe OAuth as missing — stale. See [archive/README.md](./archive/README.md).
 
 **May 28, 2026:** A local stash on one machine had an alternate OAuth split (`lib/googleOAuth.ts` + `listGoogleEvents`); that was **not** merged. **`main` uses monolithic `lib/googleCalendar.ts`** (OAuth + `listBusyTimes` + `/api/calendar/sync`). Disconnect is implemented on Profile via `DELETE /api/calendar/sync`.

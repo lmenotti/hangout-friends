@@ -1,10 +1,13 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
+import { isPlanRespondPage } from '@/lib/planRoutes'
 import PlacesInput from '@/components/PlacesInput'
 
 export default function NameModal() {
+  const pathname = usePathname()
   const { user, signInOpen, setUser, hideSignIn } = useUser()
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
@@ -15,8 +18,8 @@ export default function NameModal() {
   const [error, setError] = useState('')
   const checkDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  // Sign-in is fully optional and only shown when the user explicitly opts in.
-  if (!signInOpen || user) return null
+  // Legacy name+password sign-in — never on anonymous plan respond pages.
+  if (isPlanRespondPage(pathname) || !signInOpen || user) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,7 +71,7 @@ export default function NameModal() {
           <p className="text-sm text-zinc-500 mt-1">
             {needsPassword
               ? 'This name is protected — enter the password.'
-              : 'Optional — only needed for pods, history, and calendar sync.'}
+              : 'Legacy sign-in by name. Prefer email? Use the sign-in page instead.'}
           </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">

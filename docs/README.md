@@ -6,6 +6,22 @@ Live at [hangout-friends.vercel.app](https://hangout-friends.vercel.app)
 
 ---
 
+## Documentation map (read in this order)
+
+| Doc | Purpose |
+|-----|---------|
+| [GOALS.md](./GOALS.md) | Strategy, milestones, kill criteria |
+| [PRODUCT.md](./PRODUCT.md) | v1 blueprint — what to build and what to refuse |
+| **This file** | Current codebase, env vars, deployment, **active priorities** |
+| [AGENT_WORK.md](./AGENT_WORK.md) | Sprint 4 QA checklist + Wave 4 agent prompts |
+| [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md) | Calendar OAuth + deferred QA |
+| [ROADMAP.md](./ROADMAP.md) | Post-MVP ideas (not commitments) |
+| [archive/](./archive/) | Historical audits and May 2026 wave plan — **not authoritative** |
+
+Agent entry point: `CLAUDE.md` at repo root (points here).
+
+---
+
 ## How it works
 
 The atomic unit is a **plan**: a shareable URL anyone can respond to without creating an account. A plan creator names the hangout, sets a date range, and shares the link. Recipients tap it, enter a first name, mark their availability, and they're done. The creator uses the availability heatmap and activity ideas to auto-schedule the best time.
@@ -16,9 +32,13 @@ The atomic unit is a **plan**: a shareable URL anyone can respond to without cre
 
 ## Current state (as of May 28, 2026)
 
-Waves 0–3 of the MVP agent plan are **code-complete** (pending commit/deploy). The product is plans-first: create at `/polls/new`, share `/p/[slug]`, anonymous respond with save-as-you-go availability, ideas, auto-schedule, and RSVP — no account required.
+**Waves 0–3** (MVP agent plan) are **code-complete**. The product is plans-first: create at `/polls/new`, share `/p/[slug]`, anonymous respond with save-as-you-go availability, ideas, auto-schedule, and RSVP — no account required.
 
-**Shipped tonight (in working tree):**
+**Sprint 4** (human validation — HGT-17, platform OG, device PWA/push, prod calendar) has **not started**. See [AGENT_WORK.md](./AGENT_WORK.md).
+
+**Wave 4** (optional code before or after Sprint 4): top-3 scheduler (HGT-22). Magic link auth (HGT-11/13) shipped. ICS (HGT-30) is done.
+
+**Shipped (Waves 0–3 + follow-ups):**
 
 | Area | Linear / work | Notes |
 |------|----------------|-------|
@@ -53,8 +73,8 @@ Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo
 - Pod-level auto-scheduling
 
 ### Auth (in transition)
-- Current: name + optional password, token stored in localStorage (`context/UserContext.tsx`)
-- Target: email + magic link (no password, no phone number); anonymous responses identified by first name + cookie, scoped to one plan
+- **Plans:** per-plan httpOnly cookie + first name (`lib/planIdentity.ts`) — no account required
+- **Accounts:** email + magic link at `/auth/signin` and `/auth/signup` (HGT-11/13); legacy name+password via NameModal. Session token in `gs_token` cookie (`context/UserContext.tsx`).
 
 ### Admin
 - PIN-protected admin panel at `/admin`
@@ -103,6 +123,8 @@ VAPID_PRIVATE_KEY=your_vapid_private_key            # Web Push (server — never
 VAPID_SUBJECT=mailto:hello@hangout-friends.vercel.app  # optional Web Push contact URI
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=your_vapid_public_key  # same public key for browser subscribe
 CRON_SECRET=your_cron_secret                        # secures /api/cron/* (Vercel Cron sends Bearer token)
+RESEND_API_KEY=your_resend_api_key                  # optional — magic link emails (HGT-11/13)
+RESEND_FROM="Hangout <hello@yourdomain.com>"        # optional — sender for magic link emails
 ```
 
 Generate Web Push VAPID keys with:
@@ -214,18 +236,22 @@ app/
 components/
   AvailabilityGrid.tsx
   BottomNav.tsx           # Fixed bottom tab bar (mobile)
-  CreateEventForm.tsx
-  EventsList.tsx
-  IdeasBoard.tsx
-  NameModal.tsx           # Opt-in sign-in dialog (only shown when user clicks "Sign in"; never auto-pops)
+  NameModal.tsx           # Opt-in sign-in (not on plan pages)
   Nav.tsx
+  PollGrid.tsx            # Plan availability grid
+  InstallPrompt.tsx       # PWA install nudge
+  PushNotificationPrompt.tsx
 context/
-  UserContext.tsx         # Token-based identity in localStorage (being replaced with cookies + magic link)
+  UserContext.tsx         # Account token in localStorage (magic link planned — HGT-11/13)
 lib/
+  planIdentity.ts         # Per-plan httpOnly cookie for anonymous respondents
   googleCalendar.ts       # Google OAuth helpers, token storage, listBusyTimes (freebusy)
+  pollSchedule.ts         # Plan auto-schedule algorithm
   password.ts             # scrypt hashing for optional passwords
   supabase.ts             # Lazy-initialized Supabase client
-migrations/               # Numbered SQL migration files (001–016)
+migrations/               # Numbered SQL migration files (see migrations/ for latest)
+public/
+  sw.js                   # Service worker (push)
 scripts/
   migrate.mjs             # Migration runner (Supabase Management API)
 types/
@@ -236,7 +262,7 @@ types/
 
 ## Active priorities
 
-Synced with [Linear](https://linear.app/hangout-friends). Code for Waves 0–3 is complete; human validation runs tomorrow. Wave 4 is optional backlog.
+Synced with [Linear](https://linear.app/hangout-friends). Full agent/QA breakdown: [AGENT_WORK.md](./AGENT_WORK.md).
 
 ### Done (code shipped — human QA where noted)
 
@@ -254,15 +280,15 @@ Synced with [Linear](https://linear.app/hangout-friends). Code for Waves 0–3 i
 
 Dev verification: `npm run verify:021` · `npm run test:plan-loop` · `npm run build`
 
-### Tomorrow (human validation)
+### Sprint 4 — human validation (not started)
 
-1. **HGT-17** — 5-friend mobile Safari teardown (Sprint 0 exit criteria)
+1. **HGT-17** — 5-friend mobile Safari teardown
 2. **HGT-21** — OG previews in iMessage, WhatsApp, Discord, Slack
-3. **HGT-27/28** — PWA install + end-to-end push on real devices (permission prompt exists; verify subscribe + delivery)
+3. **HGT-27/28** — PWA install + end-to-end push on real devices
 4. **HGT-29/34** — Google OAuth smoke test on production — [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md)
 
-### Deferred — Wave 4 (optional)
+### Wave 4 — optional code (agents)
 
-- **HGT-11/13** — Email + magic link auth
-- **HGT-22** — Auto-scheduler top-3 candidate picker
-- **HGT-29 pre-fill** — wire `listBusyTimes` into plan availability grid (OAuth connect shipped)
+| **HGT-11/13** | Email + magic link auth — `/auth/signin`, migration 024 |
+- **HGT-22** — Auto-scheduler top-3 candidate picker (shipped: preview POST → confirm with `slot_key` + `idea_id`)
+- **HGT-29** — Calendar busy pre-fill on plan grid (verify UI vs [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md) before duplicating work)
