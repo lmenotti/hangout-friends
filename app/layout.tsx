@@ -5,7 +5,6 @@ import './globals.css'
 import { UserProvider } from '@/context/UserContext'
 import Nav from '@/components/Nav'
 import BottomNav from '@/components/BottomNav'
-import NameModal from '@/components/NameModal'
 import MainShell from '@/components/MainShell'
 import InstallPrompt from '@/components/InstallPrompt'
 import PushNotificationPrompt from '@/components/PushNotificationPrompt'
@@ -42,7 +41,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen antialiased overscroll-none" suppressHydrationWarning>
         <UserProvider>
             <Nav />
-            <NameModal />
             <MainShell>{children}</MainShell>
             <BottomNav />
             <InstallPrompt />

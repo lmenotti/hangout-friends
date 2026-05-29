@@ -13,7 +13,7 @@ This is the single doc for **what to build next** and **copy-paste agent prompts
 |-------|--------|
 | **Waves 0–3** (MVP code) | **Done** — link shell, plan loop, OG, PWA, cookies, expiration, calendar OAuth, push, ICS |
 | **Sprint 4** (human validation) | **Not started** — see checklist below |
-| **Wave 4** (optional code) | **Mostly done** (PR #8) — top-3 scheduler done; magic link shipped; **HGT-11/13 In Progress** (password removal pending) |
+| **Wave 4** (optional code) | **Done** — top-3 scheduler, magic link auth (HGT-11/13), calendar pre-fill |
 
 Do not re-run archived Wave 0–3 agent prompts ([archive/mvp-agent/](./archive/mvp-agent/)).
 
@@ -46,7 +46,7 @@ Parallel-safe when files do not overlap. One agent owns `PollPageClient.tsx` at 
 
 | Linear | Title | Status | Notes |
 |--------|-------|--------|-------|
-| **HGT-11/13** | Email + magic link auth | **In progress** | Magic link shipped (PR #8); legacy name+password on `/api/users` **not removed** |
+| **HGT-11/13** | Email + magic link auth | **Done** | Magic link only; removed NameModal, `POST /api/users`, `/api/users/check` |
 | **HGT-22** | Top-3 auto-schedule picker | Done | `findTopPollScheduleCandidates`, two-step `/api/polls/[id]/schedule`, picker in `PollPageClient` |
 | **HGT-30** | ICS export | **Done** | Skip unless fixing bugs |
 | **HGT-29** | Calendar pre-fill on plan grid | Done (OAuth); **UI wiring** may still be needed | Verify in code before building duplicate work — see [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md) |

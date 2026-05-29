@@ -25,24 +25,20 @@ type UserContextType = {
   user: UserPublic | null
   token: string | null
   loading: boolean
-  signInOpen: boolean
   setUser: (user: UserPublic, token: string) => void
   updateUser: (user: UserPublic) => void
   clearUser: () => void
   showSignIn: (returnTo?: string) => void
-  hideSignIn: () => void
 }
 
 const UserContext = createContext<UserContextType>({
   user: null,
   token: null,
   loading: true,
-  signInOpen: false,
   setUser: () => {},
   updateUser: () => {},
   clearUser: () => {},
   showSignIn: () => {},
-  hideSignIn: () => {},
 })
 
 export function UserProvider({ children }: { children: ReactNode }) {
@@ -50,7 +46,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<UserPublic | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [signInOpen, setSignInOpen] = useState(false)
 
   useEffect(() => {
     // One-time migration: move token from localStorage to cookie
@@ -82,7 +77,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setCookie(COOKIE_NAME, t)
     setUserState(u)
     setToken(t)
-    setSignInOpen(false)
   }
 
   const updateUser = (u: UserPublic) => {
@@ -100,17 +94,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     router.push(`/auth/signin${query}`)
   }, [router])
 
-  const showLegacySignIn = useCallback(() => setSignInOpen(true), [])
-  const hideSignIn = () => setSignInOpen(false)
-
-  useEffect(() => {
-    const onLegacySignIn = () => showLegacySignIn()
-    window.addEventListener('hangout:legacy-signin', onLegacySignIn)
-    return () => window.removeEventListener('hangout:legacy-signin', onLegacySignIn)
-  }, [showLegacySignIn])
-
   return (
-    <UserContext.Provider value={{ user, token, loading, signInOpen, setUser, updateUser, clearUser, showSignIn, hideSignIn }}>
+    <UserContext.Provider value={{ user, token, loading, setUser, updateUser, clearUser, showSignIn }}>
       {children}
     </UserContext.Provider>
   )

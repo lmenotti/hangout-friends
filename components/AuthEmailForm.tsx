@@ -124,19 +124,6 @@ export default function AuthEmailForm({ mode }: AuthEmailFormProps) {
           </>
         )}
       </p>
-
-      <p className="text-center text-xs text-zinc-600 pt-1">
-        <button
-          type="button"
-          onClick={() => {
-            const event = new CustomEvent('hangout:legacy-signin')
-            window.dispatchEvent(event)
-          }}
-          className="text-zinc-500 hover:text-zinc-300 transition-colors touch-manipulation"
-        >
-          Sign in with name instead
-        </button>
-      </p>
     </form>
   )
 }

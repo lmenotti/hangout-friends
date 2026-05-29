@@ -72,9 +72,9 @@ Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo
 - Pod-scoped ideas, events, and availability
 - Pod-level auto-scheduling
 
-### Auth (in transition)
+### Auth
 - **Plans:** per-plan httpOnly cookie + first name (`lib/planIdentity.ts`) — no account required
-- **Accounts:** email + magic link at `/auth/signin` and `/auth/signup` (HGT-11/13); legacy name+password via NameModal. Session token in `gs_token` cookie (`context/UserContext.tsx`).
+- **Accounts:** email + magic link only at `/auth/signin` and `/auth/signup` (HGT-11/13). Session token in `gs_token` cookie (`context/UserContext.tsx`).
 
 ### Admin
 - PIN-protected admin panel at `/admin`
@@ -87,7 +87,7 @@ Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo
 
 - **Next.js 16** (App Router, TypeScript)
 - **Tailwind CSS v4**
-- **Supabase** (Postgres + RLS, no Supabase Auth — custom token system, transitioning to magic link)
+- **Supabase** (Postgres + RLS, no Supabase Auth — custom token + magic link sessions)
 - **Vercel** (hosting, automatic deploys from `main`)
 - **Google Maps API** — travel time estimates on ideas (optional)
 - **Anthropic Claude** — admin bug-report fix suggestions (optional)
@@ -236,18 +236,16 @@ app/
 components/
   AvailabilityGrid.tsx
   BottomNav.tsx           # Fixed bottom tab bar (mobile)
-  NameModal.tsx           # Opt-in sign-in (not on plan pages)
   Nav.tsx
   PollGrid.tsx            # Plan availability grid
   InstallPrompt.tsx       # PWA install nudge
   PushNotificationPrompt.tsx
 context/
-  UserContext.tsx         # Account session via gs_token cookie (magic link + legacy password sign-in)
+  UserContext.tsx         # Account session via gs_token cookie (magic link)
 lib/
   planIdentity.ts         # Per-plan httpOnly cookie for anonymous respondents
   googleCalendar.ts       # Google OAuth helpers, token storage, listBusyTimes (freebusy)
   pollSchedule.ts         # Plan auto-schedule algorithm
-  password.ts             # scrypt hashing for optional passwords
   supabase.ts             # Lazy-initialized Supabase client
 migrations/               # Numbered SQL migration files (see migrations/ for latest)
 public/
@@ -277,7 +275,7 @@ Synced with [Linear](https://linear.app/hangout-friends). Full agent/QA breakdow
 | **HGT-30** | ICS export on scheduled plans (`/api/polls/[id]/ics`) |
 | **HGT-29/34** | Google Calendar OAuth + `/api/calendar/sync` — **prod OAuth test deferred** |
 | **HGT-28** | Push subscriptions, service worker, 3 allowlisted types; permission prompt shipped (`PushNotificationPrompt`) — **real-device push test deferred** |
-| **HGT-11/13** | Magic link shipped (PR #8); **In Progress** — legacy name+password on `/api/users` not removed yet |
+| **HGT-11/13** | Email + magic link auth; legacy name+password removed |
 | **HGT-22** | Top-3 auto-schedule picker (preview → confirm) |
 | **HGT-50/53/48** | Autosave grid fix; creator cookie + `?fill=1` after plan create |
 
@@ -292,6 +290,6 @@ Dev verification: `npm run verify:021` · `npm run test:plan-loop` · `npm run b
 
 ### Wave 4 — shipped (PR #8, May 29)
 
-- **HGT-11/13** — Magic link at `/auth/signin` (migration `024`); password removal still open (Linear: In Progress)
+- **HGT-11/13** — Magic link at `/auth/signin` (migration `024`); accounts are email + magic link only
 - **HGT-22** — Top-3 auto-schedule: preview `POST /schedule` → confirm with `slot_key` + `idea_id`
 - **HGT-29** — Calendar busy pre-fill on plan grid (verify UI vs [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md))
