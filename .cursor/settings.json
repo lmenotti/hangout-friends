@@ -1,0 +1,13 @@
+{
+  "plugins": {
+    "supabase": {
+      "enabled": false
+    },
+    "linear": {
+      "enabled": false
+    },
+    "vercel": {
+      "enabled": false
+    }
+  }
+}

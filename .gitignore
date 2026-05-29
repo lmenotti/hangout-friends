@@ -44,3 +44,6 @@ next-env.d.ts
 #ROADMAP.md
 matrix_behavior.md
 .env*.local
+
+# Claude Code local settings
+.claude/settings.local.json
