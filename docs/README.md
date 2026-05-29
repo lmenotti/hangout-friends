@@ -242,7 +242,7 @@ components/
   InstallPrompt.tsx       # PWA install nudge
   PushNotificationPrompt.tsx
 context/
-  UserContext.tsx         # Account token in localStorage (magic link planned — HGT-11/13)
+  UserContext.tsx         # Account session via gs_token cookie (magic link + legacy password sign-in)
 lib/
   planIdentity.ts         # Per-plan httpOnly cookie for anonymous respondents
   googleCalendar.ts       # Google OAuth helpers, token storage, listBusyTimes (freebusy)
@@ -277,6 +277,9 @@ Synced with [Linear](https://linear.app/hangout-friends). Full agent/QA breakdow
 | **HGT-30** | ICS export on scheduled plans (`/api/polls/[id]/ics`) |
 | **HGT-29/34** | Google Calendar OAuth + `/api/calendar/sync` — **prod OAuth test deferred** |
 | **HGT-28** | Push subscriptions, service worker, 3 allowlisted types; permission prompt shipped (`PushNotificationPrompt`) — **real-device push test deferred** |
+| **HGT-11/13** | Magic link shipped (PR #8); **In Progress** — legacy name+password on `/api/users` not removed yet |
+| **HGT-22** | Top-3 auto-schedule picker (preview → confirm) |
+| **HGT-50/53/48** | Autosave grid fix; creator cookie + `?fill=1` after plan create |
 
 Dev verification: `npm run verify:021` · `npm run test:plan-loop` · `npm run build`
 
@@ -287,8 +290,8 @@ Dev verification: `npm run verify:021` · `npm run test:plan-loop` · `npm run b
 3. **HGT-27/28** — PWA install + end-to-end push on real devices
 4. **HGT-29/34** — Google OAuth smoke test on production — [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md)
 
-### Wave 4 — optional code (agents)
+### Wave 4 — shipped (PR #8, May 29)
 
-| **HGT-11/13** | Email + magic link auth — `/auth/signin`, migration 024 |
-- **HGT-22** — Auto-scheduler top-3 candidate picker (shipped: preview POST → confirm with `slot_key` + `idea_id`)
-- **HGT-29** — Calendar busy pre-fill on plan grid (verify UI vs [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md) before duplicating work)
+- **HGT-11/13** — Magic link at `/auth/signin` (migration `024`); password removal still open (Linear: In Progress)
+- **HGT-22** — Top-3 auto-schedule: preview `POST /schedule` → confirm with `slot_key` + `idea_id`
+- **HGT-29** — Calendar busy pre-fill on plan grid (verify UI vs [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md))

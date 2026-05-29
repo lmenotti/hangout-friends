@@ -1,6 +1,6 @@
 # Agent work — MVP status & prompts
 
-**Last updated:** May 28, 2026  
+**Last updated:** May 29, 2026  
 **Linear:** [hangout-friends](https://linear.app/hangout-friends)
 
 This is the single doc for **what to build next** and **copy-paste agent prompts**. Strategy and blueprint live in [GOALS.md](./GOALS.md) and [PRODUCT.md](./PRODUCT.md). Implementation details and env vars live in [README.md](./README.md).
@@ -13,7 +13,7 @@ This is the single doc for **what to build next** and **copy-paste agent prompts
 |-------|--------|
 | **Waves 0–3** (MVP code) | **Done** — link shell, plan loop, OG, PWA, cookies, expiration, calendar OAuth, push, ICS |
 | **Sprint 4** (human validation) | **Not started** — see checklist below |
-| **Wave 4** (optional code) | **In progress / backlog** — magic link auth, top-3 scheduler UX, calendar pre-fill UI |
+| **Wave 4** (optional code) | **Mostly done** (PR #8) — top-3 scheduler done; magic link shipped; **HGT-11/13 In Progress** (password removal pending) |
 
 Do not re-run archived Wave 0–3 agent prompts ([archive/mvp-agent/](./archive/mvp-agent/)).
 
@@ -46,7 +46,7 @@ Parallel-safe when files do not overlap. One agent owns `PollPageClient.tsx` at 
 
 | Linear | Title | Status | Notes |
 |--------|-------|--------|-------|
-| **HGT-11/13** | Email + magic link auth | **Done** | `/auth/signin`, `/auth/signup`, `/api/auth/magic-link/*`, migration 024 |
+| **HGT-11/13** | Email + magic link auth | **In progress** | Magic link shipped (PR #8); legacy name+password on `/api/users` **not removed** |
 | **HGT-22** | Top-3 auto-schedule picker | Done | `findTopPollScheduleCandidates`, two-step `/api/polls/[id]/schedule`, picker in `PollPageClient` |
 | **HGT-30** | ICS export | **Done** | Skip unless fixing bugs |
 | **HGT-29** | Calendar pre-fill on plan grid | Done (OAuth); **UI wiring** may still be needed | Verify in code before building duplicate work — see [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md) |
