@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       .from('users')
       .update({ token: newToken })
       .eq('id', existing.id)
-      .select('id, name, token, created_at, home_location, google_refresh_token')
+      .select('id, name, token, created_at, home_location, email, google_refresh_token')
       .single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json(sanitizeUserResponse(data))
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('users')
     .insert({ name: trimmedName, token: newToken, password_hash, home_location: trimmedHome })
-    .select('id, name, token, created_at, home_location, google_refresh_token')
+    .select('id, name, token, created_at, home_location, email, google_refresh_token')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 }
 
 function sanitizeUserResponse(
-  data: { id: string; name: string; token: string; created_at: string; home_location: string | null; google_refresh_token?: string | null }
+  data: { id: string; name: string; token: string; created_at: string; home_location: string | null; email?: string | null; google_refresh_token?: string | null }
 ) {
   const { google_refresh_token, ...user } = data
   return {
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('users')
-    .select('id, name, token, created_at, home_location, google_refresh_token')
+    .select('id, name, token, created_at, home_location, email, google_refresh_token')
     .eq('token', token)
     .single()
 

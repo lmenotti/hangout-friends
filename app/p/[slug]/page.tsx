@@ -153,9 +153,16 @@ export async function generateMetadata(
 }
 
 export default async function PlanSlugPage(
-  { params }: { params: Promise<{ slug: string }> }
+  {
+    params,
+    searchParams,
+  }: {
+    params: Promise<{ slug: string }>
+    searchParams: Promise<{ fill?: string }>
+  },
 ) {
   const { slug } = await params
+  const { fill } = await searchParams
   const poll = await getPollBySlug(slug)
 
   if (!poll) notFound()
@@ -164,5 +171,5 @@ export default async function PlanSlugPage(
     return <PlanExpired title={poll.title} />
   }
 
-  return <PollPageClient id={poll.id} />
+  return <PollPageClient id={poll.id} autoFillAvailability={fill === '1'} />
 }

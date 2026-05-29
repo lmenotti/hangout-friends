@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { appendPlanIdentityCookie } from '@/lib/planIdentity'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 
 const PLAN_RETENTION_DAYS = 30
@@ -80,5 +81,9 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     )
   }
-  return NextResponse.json(data)
+  const res = NextResponse.json(data)
+  if (creator_name?.trim() && data && typeof data === 'object' && 'id' in data) {
+    appendPlanIdentityCookie(res, String((data as { id: string }).id), creator_name.trim())
+  }
+  return res
 }

@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 
 function JoinForm() {
-  const { user, token, showSignIn } = useUser()
+  const { user, token } = useUser()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [code, setCode] = useState(searchParams.get('code') ?? '')
@@ -18,9 +18,9 @@ function JoinForm() {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
         <p className="text-zinc-400 text-sm">Sign in to join a pod.</p>
-        <button onClick={showSignIn} className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
+        <Link href="/auth/signin?returnTo=/pods/join" className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
           Sign in
-        </button>
+        </Link>
       </div>
     )
   }

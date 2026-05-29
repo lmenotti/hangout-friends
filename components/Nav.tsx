@@ -13,7 +13,7 @@ const links = [
 
 export default function Nav() {
   const pathname = usePathname()
-  const { user, loading, showSignIn } = useUser()
+  const { user, loading } = useUser()
 
   if (isPlanRespondPage(pathname)) return null
 
@@ -42,8 +42,8 @@ export default function Nav() {
           </div>
         </div>
         {!user && !loading && (
-          <button
-            onClick={showSignIn}
+          <Link
+            href="/auth/signin"
             className="text-sm px-3 py-2 rounded-lg transition-colors touch-manipulation min-h-[44px] flex items-center gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
@@ -52,7 +52,7 @@ export default function Nav() {
               <line x1="15" y1="12" x2="3" y2="12" />
             </svg>
             <span className="hidden sm:block">Sign in</span>
-          </button>
+          </Link>
         )}
         {user && (
           <div className="flex items-center gap-2 shrink-0">

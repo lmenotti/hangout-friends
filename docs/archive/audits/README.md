@@ -9,4 +9,4 @@ Files `051126_phase*.md` are **November 2025** snapshots from a blueprint alignm
 | `/calendar` page | Placeholder | Removed; connect on `/profile` |
 | Google token DB columns | Unused | Written on OAuth callback |
 
-Verify against the live codebase and [../README.md](../README.md) before acting on audit recommendations.
+Verify against the live codebase and [../../README.md](../../README.md) before acting on audit recommendations.

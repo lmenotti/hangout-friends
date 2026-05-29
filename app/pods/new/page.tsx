@@ -6,7 +6,7 @@ import { useUser } from '@/context/UserContext'
 import Link from 'next/link'
 
 export default function NewPodPage() {
-  const { user, token, showSignIn } = useUser()
+  const { user, token } = useUser()
   const router = useRouter()
   const [name, setName] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -16,9 +16,9 @@ export default function NewPodPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
         <p className="text-zinc-400 text-sm">Sign in to create a pod.</p>
-        <button onClick={showSignIn} className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
+        <Link href="/auth/signin?returnTo=/pods/new" className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
           Sign in
-        </button>
+        </Link>
       </div>
     )
   }

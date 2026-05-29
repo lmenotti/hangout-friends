@@ -16,7 +16,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | Build (includes migrations) | `npm run build` |
 | Migrations only | `npm run migrate` |
 
-See `CLAUDE.md` and `docs/README.md` for full docs, env var list, and architecture.
+See `CLAUDE.md` and `docs/README.md` for full docs, env var list, and architecture. Agent tasks and Wave 4 prompts: `docs/AGENT_WORK.md`. Historical docs: `docs/archive/` only.
 
 ### MCP integrations (Cursor + Zed)
 
