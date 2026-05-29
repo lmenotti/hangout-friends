@@ -10,6 +10,7 @@ import MainShell from '@/components/MainShell'
 import InstallPrompt from '@/components/InstallPrompt'
 import PushNotificationPrompt from '@/components/PushNotificationPrompt'
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 const geistSans = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           strategy="afterInteractive"
         />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
