@@ -54,14 +54,19 @@ async function subscribePush(
 ): Promise<PushSubscription | null> {
   if (Notification.permission !== 'granted') return null
 
-  let sub = await reg.pushManager.getSubscription()
-  if (!sub) {
-    sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
-    })
+  try {
+    let sub = await reg.pushManager.getSubscription()
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
+      })
+    }
+    return sub
+  } catch {
+    // Common in local dev and embedded browsers when PushManager exists but FCM/APNs is unavailable.
+    return null
   }
-  return sub
 }
 
 async function postSubscription(sub: PushSubscription, watches: PlanWatch[]): Promise<boolean> {
@@ -102,16 +107,20 @@ export function getServiceWorkerRegistration(): Promise<ServiceWorkerRegistratio
 export async function syncPushSubscription(vapidPublicKey: string): Promise<boolean> {
   if (!pushSupported() || Notification.permission !== 'granted') return false
 
-  const watches = await fetchPlanWatches()
-  if (!watches.length) return false
+  try {
+    const watches = await fetchPlanWatches()
+    if (!watches.length) return false
 
-  const reg = await getServiceWorkerRegistration()
-  if (!reg) return false
+    const reg = await getServiceWorkerRegistration()
+    if (!reg) return false
 
-  const sub = await subscribePush(reg, vapidPublicKey)
-  if (!sub) return false
+    const sub = await subscribePush(reg, vapidPublicKey)
+    if (!sub) return false
 
-  return postSubscription(sub, watches)
+    return postSubscription(sub, watches)
+  } catch {
+    return false
+  }
 }
 
 /** Request notification permission, then subscribe. Returns final permission state. */
@@ -124,7 +133,11 @@ export async function requestPushPermissionAndSync(vapidPublicKey: string): Prom
   }
 
   if (permission === 'granted') {
-    await syncPushSubscription(vapidPublicKey)
+    try {
+      await syncPushSubscription(vapidPublicKey)
+    } catch {
+      /* push service unavailable in this environment */
+    }
   }
 
   return permission

@@ -42,7 +42,7 @@ export default function PushNotificationPrompt() {
 
     if (permission === 'granted') {
       setVisible(false)
-      void syncPushSubscription(VAPID_PUBLIC_KEY)
+      void syncPushSubscription(VAPID_PUBLIC_KEY).catch(() => {})
       return
     }
 

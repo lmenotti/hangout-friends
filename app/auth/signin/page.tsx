@@ -11,22 +11,26 @@ export default function SignInPage() {
             hangout
           </Link>
           <h1 className="text-xl font-semibold text-zinc-100">Sign in</h1>
-          <p className="text-sm text-zinc-500">
-            Optional — for pods, plan history, and calendar sync. No password needed.
-          </p>
         </div>
 
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
           <Suspense fallback={<div className="h-32 rounded-xl bg-zinc-800/50 animate-pulse" />}>
-            <AuthEmailForm mode="signin" />
+            <AuthEmailForm />
           </Suspense>
         </div>
 
-        <p className="text-center">
-          <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
-            Back to home
-          </Link>
-        </p>
+        <div className="space-y-2 text-center">
+          <p>
+            <Link href="/auth/signin/options" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+              Other sign-in options
+            </Link>
+          </p>
+          <p>
+            <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+              Back to home
+            </Link>
+          </p>
+        </div>
       </div>
     </main>
   )

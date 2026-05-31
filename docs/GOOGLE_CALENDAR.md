@@ -29,7 +29,7 @@ Update manually in [Linear](https://linear.app/hangout-friends) (or `node script
 | Profile UI | `/profile` — connect, disconnect, OAuth redirect messages |
 | User API | `GET/POST/PATCH /api/users` — `google_calendar_connected` flag; tokens never returned |
 
-**Scope:** `calendar.readonly`  
+**Scope:** `calendar.readonly` + `userinfo.profile` (profile scope used to upgrade display names on connect when the name was email-derived)
 **Policy:** OAuth on **production + localhost** only (not Vercel Preview). See README.
 
 ### Verified (localhost)

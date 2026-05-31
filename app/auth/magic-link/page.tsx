@@ -25,27 +25,27 @@ function MagicLinkVerify() {
       return
     }
 
-    let cancelled = false
+    const controller = new AbortController()
 
     fetch('/api/auth/magic-link/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
+      signal: controller.signal,
     })
       .then(async res => {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error ?? 'Sign-in failed')
-        if (cancelled) return
         setUser(data, data.token)
         router.replace(typeof data.returnTo === 'string' ? data.returnTo : '/profile')
       })
       .catch(err => {
-        if (cancelled) return
+        if (controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) return
         setStatus('error')
         setError(err instanceof Error ? err.message : 'Sign-in failed')
       })
 
-    return () => { cancelled = true }
+    return () => controller.abort()
   }, [user, searchParams, router, setUser])
 
   if (status === 'error') {

@@ -39,6 +39,30 @@ export function getPlanIdentityFromRequest(req: NextRequest, pollId: string): st
   return getPlanIdentityFromCookies(req.cookies, pollId)
 }
 
+type CookieStoreWithGetAll = CookieReader & {
+  getAll: () => { name: string; value: string }[]
+}
+
+/** All respondent names stored in plan identity cookies on this device. */
+export function getAllPlanIdentityNamesFromCookies(cookieStore: CookieStoreWithGetAll): string[] {
+  const names: string[] = []
+  for (const cookie of cookieStore.getAll()) {
+    if (!cookie.name.startsWith(COOKIE_PREFIX)) continue
+    try {
+      const name = normalizePlanIdentityName(decodeURIComponent(cookie.value))
+      if (name) names.push(name)
+    } catch {
+      const name = normalizePlanIdentityName(cookie.value)
+      if (name) names.push(name)
+    }
+  }
+  return names
+}
+
+export function getAllPlanIdentityNamesFromRequest(req: NextRequest): string[] {
+  return getAllPlanIdentityNamesFromCookies(req.cookies)
+}
+
 export function appendPlanIdentityCookie(
   res: NextResponse,
   pollId: string,

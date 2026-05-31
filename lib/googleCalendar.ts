@@ -1,9 +1,15 @@
 import { createHmac } from 'crypto'
 import { google } from 'googleapis'
 import type { Credentials } from 'google-auth-library'
+import {
+  canUpgradeNameFromGoogle,
+  normalizeGoogleGivenName,
+  type DisplayNameSource,
+} from '@/lib/displayName'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 
 export const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly'
+export const GOOGLE_PROFILE_SCOPE = 'https://www.googleapis.com/auth/userinfo.profile'
 
 export type BusyInterval = {
   start: string
@@ -44,7 +50,7 @@ export function getAuthUrl(state: string): string {
   return client.generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
-    scope: [GOOGLE_CALENDAR_SCOPE],
+    scope: [GOOGLE_CALENDAR_SCOPE, GOOGLE_PROFILE_SCOPE, 'openid'],
     state,
   })
 }
@@ -68,6 +74,47 @@ export async function saveGoogleTokens(userId: string, tokens: Credentials): Pro
     .eq('id', userId)
 
   if (error) throw new Error(error.message)
+}
+
+export async function fetchGoogleProfileGivenName(accessToken: string): Promise<string | null> {
+  const client = createOAuth2Client()
+  client.setCredentials({ access_token: accessToken })
+  const oauth2 = google.oauth2({ version: 'v2', auth: client })
+  const { data } = await oauth2.userinfo.get()
+  return normalizeGoogleGivenName(data.given_name ?? data.name)
+}
+
+/** Upgrade display name from Google profile when the name came from email derivation. */
+export async function maybeUpgradeDisplayNameFromGoogle(
+  userId: string,
+  accessToken: string | null | undefined,
+): Promise<void> {
+  if (!accessToken) return
+
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('name_source')
+      .eq('id', userId)
+      .single()
+
+    if (error || !user) return
+    if (!canUpgradeNameFromGoogle(user.name_source as DisplayNameSource | null)) return
+
+    const googleName = await fetchGoogleProfileGivenName(accessToken)
+    if (!googleName) return
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ name: googleName, name_source: 'google' })
+      .eq('id', userId)
+
+    if (updateError) {
+      console.error('[googleCalendar] display name upgrade failed:', updateError.message)
+    }
+  } catch (err) {
+    console.error('[googleCalendar] display name upgrade failed:', err)
+  }
 }
 
 export async function clearGoogleTokens(userId: string): Promise<void> {

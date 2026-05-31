@@ -14,6 +14,7 @@ export type Database = {
           google_scope: string | null
           google_token_type: string | null
           google_expiry_date: number | null
+          name_source: string | null
         }
         Insert: {
           id?: string
@@ -27,6 +28,7 @@ export type Database = {
           google_scope?: string | null
           google_token_type?: string | null
           google_expiry_date?: number | null
+          name_source?: string | null
         }
         Update: {
           id?: string
@@ -40,6 +42,7 @@ export type Database = {
           google_scope?: string | null
           google_token_type?: string | null
           google_expiry_date?: number | null
+          name_source?: string | null
         }
       }
       magic_link_tokens: {

@@ -48,3 +48,11 @@ matrix_behavior.md
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Google Antigravity (local installation / workspace state)
+.antigravitycli/
+.antigravity/*
+!.antigravity/rules
+!.antigravity/rules.md
+.gemini/
+mcp_config.json

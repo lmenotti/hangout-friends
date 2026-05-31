@@ -3,6 +3,7 @@ import {
   decodeOAuthState,
   exchangeCodeForTokens,
   isGoogleOAuthConfigured,
+  maybeUpgradeDisplayNameFromGoogle,
   saveGoogleTokens,
 } from '@/lib/googleCalendar'
 
@@ -36,6 +37,7 @@ export async function GET(req: NextRequest) {
   try {
     const tokens = await exchangeCodeForTokens(code)
     await saveGoogleTokens(userId, tokens)
+    await maybeUpgradeDisplayNameFromGoogle(userId, tokens.access_token)
     profileUrl.searchParams.set('calendar', 'connected')
     return NextResponse.redirect(profileUrl)
   } catch (err) {

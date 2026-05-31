@@ -20,6 +20,8 @@ Live at [hangout-friends.vercel.app](https://hangout-friends.vercel.app)
 
 Agent entry point: `CLAUDE.md` at repo root (points here).
 
+**Local IDE/agent tooling:** `.gitignore` excludes machine-specific Antigravity install state (`.antigravitycli/`, `.antigravity/*` except shareable `rules`, project `.gemini/`, `mcp_config.json`). Shareable Antigravity rules in `.antigravity/rules` or `GEMINI.md` at repo root are not ignored.
+
 ---
 
 ## How it works
@@ -74,7 +76,7 @@ Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo
 
 ### Auth
 - **Plans:** per-plan httpOnly cookie + first name (`lib/planIdentity.ts`) — no account required
-- **Accounts:** email + magic link only at `/auth/signin` and `/auth/signup` (HGT-11/13). Session token in `gs_token` cookie (`context/UserContext.tsx`).
+- **Accounts:** unified email + magic link at `/auth/signin` (HGT-11/13). No separate sign-up flow — new users get an account on first link click. Display name resolution (`lib/displayName.ts`, `users.name_source`): (1) plan identity cookie on device, (2) first segment of email local part (lowercase, source `derived`), (3) full email local part fallback (`email_local`); Google Calendar connect may upgrade `derived` names from profile `given_name`. Session token in `gs_token` cookie (`context/UserContext.tsx`). `/auth/signup` redirects to sign-in.
 
 ### Admin
 - PIN-protected admin panel at `/admin`

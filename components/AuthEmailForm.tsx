@@ -1,19 +1,13 @@
 'use client'
 
-import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
-type AuthEmailFormProps = {
-  mode: 'signin' | 'signup'
-}
-
-export default function AuthEmailForm({ mode }: AuthEmailFormProps) {
+export default function AuthEmailForm() {
   const searchParams = useSearchParams()
   const returnTo = searchParams.get('returnTo') ?? '/profile'
 
   const [email, setEmail] = useState('')
-  const [name, setName] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
@@ -30,7 +24,7 @@ export default function AuthEmailForm({ mode }: AuthEmailFormProps) {
       const res = await fetch('/api/auth/magic-link/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name, mode, returnTo }),
+        body: JSON.stringify({ email, returnTo }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Something went wrong')
@@ -73,19 +67,6 @@ export default function AuthEmailForm({ mode }: AuthEmailFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      {mode === 'signup' && (
-        <input
-          type="text"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Your first name"
-          autoComplete="given-name"
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3.5 text-base text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-          maxLength={40}
-          required
-        />
-      )}
-
       <input
         type="email"
         value={email}
@@ -101,28 +82,14 @@ export default function AuthEmailForm({ mode }: AuthEmailFormProps) {
 
       <button
         type="submit"
-        disabled={submitting || !email.trim() || (mode === 'signup' && name.trim().length < 2)}
+        disabled={submitting || !email.trim()}
         className="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-40 text-white text-base font-medium py-3.5 rounded-xl transition-colors touch-manipulation"
       >
-        {submitting ? 'Sending…' : mode === 'signup' ? 'Create account' : 'Email me a sign-in link'}
+        {submitting ? 'Sending…' : 'Email me a sign-in link'}
       </button>
 
       <p className="text-center text-xs text-zinc-600">
-        {mode === 'signin' ? (
-          <>
-            New here?{' '}
-            <Link href={`/auth/signup${returnTo !== '/profile' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`} className="text-indigo-400 hover:text-indigo-300">
-              Create an account
-            </Link>
-          </>
-        ) : (
-          <>
-            Already have an account?{' '}
-            <Link href={`/auth/signin${returnTo !== '/profile' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`} className="text-indigo-400 hover:text-indigo-300">
-              Sign in
-            </Link>
-          </>
-        )}
+        New here? We&apos;ll create an account when you use the link.
       </p>
     </form>
   )
