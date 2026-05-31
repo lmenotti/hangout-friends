@@ -156,7 +156,7 @@ A pod can create a plan that uses pod-member availability automatically, but the
 - **PWA:** Next.js PWA plugin, Workbox for service worker, manifest.json with proper iOS icons.
 - **Push notifications:** Web Push API. iOS Safari supports it as of 16.4. Test thoroughly on actual iPhones.
 - **Link previews:** Per-plan dynamic OG tags rendered server-side. Critical: test in iMessage, Discord, WhatsApp, Slack, Twitter, Telegram before launch.
-- **Calendar sync:** Google Calendar API, read-only scope. Lazy-fetched on demand, cached for 1 hour.
+- **Calendar sync:** Google Calendar API, read-only scope. Busy times cached per-user for 1 hour. Google push notifications (Watch API) invalidate the cache when the user's calendar changes; channels are renewed daily via cron before their 7-day expiry.
 - **AI:** Already wired up Claude for bug-report fix suggestions in admin. Don't expand AI's role in the product itself in v1.
 
 ---

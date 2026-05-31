@@ -4,7 +4,8 @@ import {
   clearGoogleTokens,
   isGoogleCalendarConnected,
   isGoogleOAuthConfigured,
-  listBusyTimes,
+  listBusyTimesCached,
+  stopCalendarWatch,
 } from '@/lib/googleCalendar'
 
 async function getUserFromToken(token: string | null) {
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const busy = await listBusyTimes(user.id, timeMin, timeMax)
+    const busy = await listBusyTimesCached(user.id, timeMin, timeMax)
     return NextResponse.json({ connected: true, busy })
   } catch (err) {
     console.error('Calendar sync failed:', err)
@@ -49,6 +50,8 @@ export async function DELETE(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
+    // Stop watch before clearing tokens — channels.stop needs valid credentials.
+    await stopCalendarWatch(user.id)
     await clearGoogleTokens(user.id)
     return NextResponse.json({ connected: false })
   } catch (err) {

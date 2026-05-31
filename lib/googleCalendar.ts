@@ -16,6 +16,14 @@ export type BusyInterval = {
   end: string
 }
 
+type BusyCacheEntry = {
+  timeMin: string
+  timeMax: string
+  busy: BusyInterval[]
+}
+
+const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+
 type GoogleTokenRow = {
   id: string
   google_access_token: string | null
@@ -239,4 +247,108 @@ export function decodeOAuthState(state: string): string | null {
   } catch {
     return null
   }
+}
+
+// Returns cached busy times if fresh and covering the requested range; otherwise fetches
+// from Google, updates the cache, and returns the result.
+export async function listBusyTimesCached(
+  userId: string,
+  timeMin: string,
+  timeMax: string,
+): Promise<BusyInterval[]> {
+  const { data: user } = await supabase
+    .from('users')
+    .select('google_busy_cache, google_busy_cached_at')
+    .eq('id', userId)
+    .single()
+
+  if (user?.google_busy_cached_at && user?.google_busy_cache) {
+    const cachedAt = new Date(user.google_busy_cached_at as string).getTime()
+    const cache = user.google_busy_cache as BusyCacheEntry
+    const fresh = Date.now() - cachedAt < CACHE_TTL_MS
+    const covers = cache.timeMin <= timeMin && cache.timeMax >= timeMax
+
+    if (fresh && covers) {
+      return cache.busy.filter((b) => b.start >= timeMin && b.end <= timeMax)
+    }
+  }
+
+  const busy = await listBusyTimes(userId, timeMin, timeMax)
+
+  await supabase
+    .from('users')
+    .update({
+      google_busy_cache: { timeMin, timeMax, busy },
+      google_busy_cached_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+
+  return busy
+}
+
+// Marks this user's busy cache as stale so the next plan page load re-fetches.
+export async function invalidateBusyCache(userId: string): Promise<void> {
+  await supabase.from('users').update({ google_busy_cached_at: null }).eq('id', userId)
+}
+
+// Registers a Google Calendar push-notification channel for the user.
+// No-ops in non-HTTPS environments (local dev) because Google requires HTTPS addresses.
+export async function watchCalendar(userId: string): Promise<void> {
+  const base = getBaseUrl()
+  if (!base.startsWith('https://')) return
+
+  const channelId = crypto.randomUUID()
+  // Set expiry to 6 days so the renewal cron (24h window) catches it before Google drops it.
+  const expirationMs = Date.now() + 6 * 24 * 60 * 60 * 1000
+
+  const calendarClient = await getAuthenticatedCalendarClient(userId)
+  const res = await calendarClient.events.watch({
+    calendarId: 'primary',
+    requestBody: {
+      id: channelId,
+      type: 'web_hook',
+      address: `${base}/api/google/webhook`,
+      expiration: String(expirationMs),
+    },
+  })
+
+  const resourceId = res.data.resourceId
+  const expiration = res.data.expiration
+  if (!resourceId || !expiration) throw new Error('Watch response missing resourceId or expiration')
+
+  // Replace any existing channel for this user.
+  await stopCalendarWatch(userId)
+
+  await supabase.from('google_calendar_channels').insert({
+    user_id: userId,
+    channel_id: channelId,
+    resource_id: resourceId,
+    expires_at: new Date(Number(expiration)).toISOString(),
+  })
+}
+
+// Stops the active push-notification channel for the user and deletes the DB record.
+// Must be called before clearing Google tokens (needs valid credentials to call channels.stop).
+export async function stopCalendarWatch(userId: string): Promise<void> {
+  const { data } = await supabase
+    .from('google_calendar_channels')
+    .select('channel_id, resource_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (!data) return
+
+  try {
+    const calendarClient = await getAuthenticatedCalendarClient(userId)
+    await calendarClient.channels.stop({
+      requestBody: { id: data.channel_id, resourceId: data.resource_id },
+    })
+  } catch {
+    // Google may have already expired the channel — safe to ignore and clean up locally.
+  }
+
+  await supabase
+    .from('google_calendar_channels')
+    .delete()
+    .eq('user_id', userId)
 }

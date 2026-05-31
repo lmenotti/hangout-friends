@@ -5,6 +5,7 @@ import {
   isGoogleOAuthConfigured,
   maybeUpgradeDisplayNameFromGoogle,
   saveGoogleTokens,
+  watchCalendar,
 } from '@/lib/googleCalendar'
 
 export async function GET(req: NextRequest) {
@@ -37,6 +38,13 @@ export async function GET(req: NextRequest) {
   try {
     const tokens = await exchangeCodeForTokens(code)
     await saveGoogleTokens(userId, tokens)
+
+    // Best-effort: register a push-notification channel so calendar changes invalidate the
+    // busy cache automatically. Failure here does not block the connect flow.
+    watchCalendar(userId).catch((err) =>
+      console.error('watchCalendar failed after OAuth connect:', err),
+    )
+
     await maybeUpgradeDisplayNameFromGoogle(userId, tokens.access_token)
     profileUrl.searchParams.set('calendar', 'connected')
     return NextResponse.redirect(profileUrl)
