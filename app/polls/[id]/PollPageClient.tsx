@@ -5,6 +5,7 @@ import PollGrid, { formatSlotLabel } from '@/components/PollGrid'
 import PollIdeasBoard, { type PollIdea } from '@/components/PollIdeasBoard'
 import { formatScheduledLabel } from '@/lib/pollSchedule'
 import { buildGoogleCalendarUrl, calendarEventFromPoll } from '@/lib/ics'
+import { useUser } from '@/context/UserContext'
 
 type Poll = {
   id: string
@@ -30,6 +31,31 @@ type SchedulePickerOption = {
   reason: string
   voter_count: number
   total_available: number
+}
+
+// Returns the set of 30-min slots (9am–9pm) across the given dates that are NOT
+// covered by any busy interval from Google Calendar. Uses local clock for slot
+// construction so the result matches the plan grid's naive date+hour keys.
+function calendarAvailableSlots(
+  dates: string[],
+  busyIntervals: { start: string; end: string }[],
+): Set<string> {
+  const available = new Set<string>()
+  for (const date of dates) {
+    for (let hour = 9; hour < 21; hour++) {
+      for (const minute of [0, 30] as const) {
+        const slotStart = new Date(
+          `${date}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`,
+        )
+        const slotEnd = new Date(slotStart.getTime() + 30 * 60 * 1000)
+        const isBusy = busyIntervals.some(({ start, end }) => {
+          return slotStart < new Date(end) && slotEnd > new Date(start)
+        })
+        if (!isBusy) available.add(`${date}-${hour}-${minute}`)
+      }
+    }
+  }
+  return available
 }
 
 function computeAggregate(responses: Response[]): Record<string, number> {
@@ -71,12 +97,18 @@ export default function PollPageClient({
   const [inspectedSlot, setInspectedSlot] = useState<string | null>(null)
   const [heatmapFilter, setHeatmapFilter] = useState<'all' | '80plus'>('all')
 
+  const [calendarBaseline, setCalendarBaseline] = useState<Set<string> | null>(null)
+  const [calendarFetching, setCalendarFetching] = useState(false)
+
+  const { token } = useUser()
+
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const savedFadeRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const skipNextSaveRef = useRef(false)
   const saveInFlightRef = useRef(false)
   const identityHydratedRef = useRef(false)
   const openFillFromCreateRef = useRef(autoFillAvailability)
+  const calendarFetchedRef = useRef(false)
 
   const applyReturningIdentity = useCallback((
     identity: string | null | undefined,
@@ -144,6 +176,36 @@ export default function PollPageClient({
     openFillFromCreateRef.current = false
     setEditing(true)
   }, [loading, name, poll?.status])
+
+  // When editing starts for a signed-in user, fetch their Google Calendar busy times and
+  // pre-fill the grid. Only runs once per component lifecycle (calendarFetchedRef guard).
+  useEffect(() => {
+    if (!editing || !token || !poll || calendarFetchedRef.current) return
+    calendarFetchedRef.current = true
+
+    const dates = poll.date_options
+    if (!dates?.length) return
+
+    setCalendarFetching(true)
+
+    const timeMin = new Date(`${dates[0]}T00:00:00`).toISOString()
+    const timeMax = new Date(`${dates[dates.length - 1]}T23:59:59`).toISOString()
+
+    fetch(
+      `/api/calendar/sync?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`,
+      { headers: { 'x-user-token': token } },
+    )
+      .then(r => (r.ok ? r.json() : null))
+      .then((data: { connected: boolean; busy?: { start: string; end: string }[] } | null) => {
+        if (!data?.connected || !data.busy) return
+        const baseline = calendarAvailableSlots(dates, data.busy)
+        setCalendarBaseline(baseline)
+        // Pre-fill only when the user has no existing response (mySlots is still empty).
+        setMySlots(prev => (prev.size > 0 ? prev : baseline))
+      })
+      .catch(() => {})
+      .finally(() => setCalendarFetching(false))
+  }, [editing, token, poll])
 
   const persistAvailability = useCallback(async (slots: Set<string>, respondentName: string) => {
     if (!respondentName.trim() || saveInFlightRef.current) return
@@ -621,6 +683,27 @@ export default function PollPageClient({
               Tap
             </button>
           </div>
+        </div>
+      )}
+
+      {!isScheduled && editing && (calendarBaseline !== null || calendarFetching) && (
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-3.5 h-3.5 shrink-0">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4M8 2v4M3 10h18" />
+            </svg>
+            {calendarFetching ? 'Loading from Google Calendar…' : 'Pre-filled from Google Calendar'}
+          </span>
+          {calendarBaseline !== null && (
+            <button
+              type="button"
+              onClick={() => setMySlots(new Set(calendarBaseline))}
+              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors touch-manipulation px-2 py-2.5 min-h-[44px] shrink-0"
+            >
+              Revert to calendar
+            </button>
+          )}
         </div>
       )}
 
