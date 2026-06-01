@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import PollGrid, { formatSlotLabel } from '@/components/PollGrid'
 import PollIdeasBoard, { type PollIdea } from '@/components/PollIdeasBoard'
-import { formatScheduledLabel } from '@/lib/pollSchedule'
+import { formatScheduledLabel } from '@/lib/formatScheduledLabel'
 import { buildGoogleCalendarUrl, calendarEventFromPoll } from '@/lib/ics'
 import { useUser } from '@/context/UserContext'
 

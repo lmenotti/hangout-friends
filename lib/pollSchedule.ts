@@ -1,4 +1,7 @@
+import { formatScheduledLabel } from '@/lib/formatScheduledLabel'
 import { geocodeLocation, fetchWeatherMap, lookupWeatherScore } from '@/lib/weather'
+
+export { formatScheduledLabel } from '@/lib/formatScheduledLabel'
 
 const START_HOUR = 9
 const END_HOUR = 21
@@ -166,12 +169,3 @@ export async function findBestPollSchedule(params: {
   return top[0] ?? null
 }
 
-export function formatScheduledLabel(scheduledAt: Date): string {
-  return scheduledAt.toLocaleString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-}

@@ -32,7 +32,7 @@ The atomic unit is a **plan**: a shareable URL anyone can respond to without cre
 
 ---
 
-## Current state (as of May 28, 2026)
+## Current state (as of June 1, 2026)
 
 **Waves 0–3** (MVP agent plan) are **code-complete**. The product is plans-first: create at `/polls/new`, share `/p/[slug]`, anonymous respond with save-as-you-go availability, ideas, auto-schedule, and RSVP — no account required.
 
@@ -52,6 +52,7 @@ The atomic unit is a **plan**: a shareable URL anyone can respond to without cre
 | Plan expiration | migration 022 | Daily cron archives plans past `expires_at` |
 | Google Calendar | HGT-29/34 | OAuth routes live; prod smoke test deferred |
 | Push | HGT-28 | migration 023, service worker, 3 allowlisted types; `PushNotificationPrompt` + `/api/push/watches` (httpOnly plan cookie reads for `plan_watches`) |
+| Perf (phase 1) | HGT-84/88/110/112 | migration 027 (`poll_responses`, `idea_votes` indexes); filtered `idea_votes` in auto-schedule; client-safe `lib/formatScheduledLabel.ts`; removed unused `date-fns`/`rrule` |
 
 Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo but are off nav. Orphaned global components removed. Pods exist but are frozen for MVP validation.
 
@@ -73,6 +74,7 @@ Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo
 - Create a named pod, share a join link
 - Pod-scoped ideas, events, and availability
 - Pod-level auto-scheduling
+- Pod idea vote/schedule API routes enforce `pod_members` membership (HGT-107), same as ideas/events list routes
 
 ### Auth
 - **Plans:** per-plan httpOnly cookie + first name (`lib/planIdentity.ts`) — no account required
@@ -194,6 +196,8 @@ Applied migrations are tracked in a `_migrations` table. New files are picked up
 `_migrations` has RLS enabled with no policies, which locks it to deny-all for every PostgREST client role. The migration runner connects via a direct Postgres connection (service role), so it bypasses RLS and is unaffected.
 
 **Migration `026_tighten_rls_users_and_remaining.sql` (HGT-109):** Drops anon `SELECT` on `users` (session tokens, email, Google OAuth fields were exposed via PostgREST). Drops remaining permissive mutation policies on polls, poll_responses, pods, pod_members, bug_reports, and `events` update — extending the `020` pattern. Enables RLS on `google_calendar_channels` with no policies (deny-all for anon; API uses service role). Public reads on plan/poll/pod/availability tables are unchanged for the link-first flow.
+
+**API auth (HGT-108, low-disruption):** Legacy global list endpoints require a valid `x-user-token` and scope results to the caller: `GET /api/events` and `GET /api/ideas` return only rows with `pod_id` null or in the user’s pods; `GET /api/availability` without `pod_id` returns only the authenticated user’s slots, and with `pod_id` requires pod membership. Plan schedule is already gated via `creator_token` on `POST /api/polls/[id]/schedule` (`lib/planCreator.ts`). `GET /api/events/[id]` is unchanged (anonymous event detail).
 
 ---
 

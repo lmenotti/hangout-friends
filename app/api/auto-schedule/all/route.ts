@@ -13,8 +13,21 @@ export async function POST(req: NextRequest) {
   const user = await getUserFromToken(token)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Get all unscheduled ideas with 2+ votes, sorted by vote count descending (highest priority first)
-  const { data: allVotes } = await supabase.from('idea_votes').select('idea_id, user_id')
+  const { data: unscheduledIdeas } = await supabase
+    .from('ideas')
+    .select('id')
+    .eq('is_scheduled', false)
+
+  const unscheduledIds = (unscheduledIdeas ?? []).map((i) => i.id)
+  if (unscheduledIds.length === 0) {
+    return NextResponse.json({ error: 'No unscheduled ideas found.' }, { status: 400 })
+  }
+
+  const { data: allVotes } = await supabase
+    .from('idea_votes')
+    .select('idea_id, user_id')
+    .in('idea_id', unscheduledIds)
+
   if (!allVotes || allVotes.length === 0) {
     return NextResponse.json({ error: 'No ideas have been voted on yet.' }, { status: 400 })
   }

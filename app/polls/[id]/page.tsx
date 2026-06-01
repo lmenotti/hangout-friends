@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
-import { formatScheduledLabel } from '@/lib/pollSchedule'
+import { formatScheduledLabel } from '@/lib/formatScheduledLabel'
 import PollPageClient from './PollPageClient'
 
 const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://hangout-friends.vercel.app'
