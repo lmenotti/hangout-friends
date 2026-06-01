@@ -88,7 +88,7 @@ Keep **app secrets** on Vercel and **agent tooling** aligned the same way on eve
 
 Never commit `.env.local`, database passwords, or PATs. MCP config in git only references `${SUPABASE_PAT}`.
 
-### Environment variables
+### Environment variables 
 
 The app requires Supabase credentials in `.env.local`. To populate them, authenticate the Vercel CLI and pull:
 
