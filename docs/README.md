@@ -12,6 +12,7 @@ Live at [hangout-friends.vercel.app](https://hangout-friends.vercel.app)
 |-----|---------|
 | [GOALS.md](./GOALS.md) | Strategy, milestones, kill criteria |
 | [PRODUCT.md](./PRODUCT.md) | v1 blueprint — what to build and what to refuse |
+| **[PERFORMANCE.md](./PERFORMANCE.md)** | **Speed is a product feature** — sacred-path rules, optimization workflow, agent checklist |
 | **This file** | Current codebase, env vars, deployment, **active priorities** |
 | [AGENT_WORK.md](./AGENT_WORK.md) | Sprint 4 QA checklist + Wave 4 agent prompts |
 | [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md) | Calendar OAuth + deferred QA |
@@ -39,6 +40,8 @@ The atomic unit is a **plan**: a shareable URL anyone can respond to without cre
 **Sprint 4** (human validation — HGT-17, platform OG, device PWA/push, prod calendar) has **not started**. See [AGENT_WORK.md](./AGENT_WORK.md).
 
 **Wave 4** (optional code before or after Sprint 4): top-3 scheduler (HGT-22). Magic link auth (HGT-11/13) shipped. ICS (HGT-30) is done.
+
+**Active (May 2026):** **HGT-91** multi-method account sign-in — email + phone primary; password, passkey, Google SSO, Apple on `/auth/signin/options`. See [AGENT_WORK.md](./AGENT_WORK.md).
 
 **Shipped (Waves 0–3 + follow-ups):**
 
@@ -79,7 +82,14 @@ Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo
 
 ### Auth
 - **Plans:** per-plan httpOnly cookie + first name (`lib/planIdentity.ts`) — no account required
-- **Accounts:** unified email + magic link at `/auth/signin` (HGT-11/13). No separate sign-up flow — new users get an account on first link click. Display name resolution (`lib/displayName.ts`, `users.name_source`): (1) plan identity cookie on device, (2) first segment of email local part (lowercase, source `derived`), (3) full email local part fallback (`email_local`); Google Calendar connect may upgrade `derived` names from profile `given_name`. Session token in `gs_token` cookie (`context/UserContext.tsx`). `/auth/signup` redirects to sign-in.
+- **Accounts (v1 — in progress, HGT-91):**
+  - **Primary** (`/auth/signin`): email magic link (shipped, HGT-13) + phone SMS OTP (HGT-93) — equal prominence
+  - **Alternatives** (`/auth/signin/options`): password (HGT-94), passkey / WebAuthn (HGT-95), Google SSO (HGT-96), Apple Sign In (HGT-97)
+  - UI shell: HGT-92 — tabs, options page, Autofill-friendly inputs (`autocomplete`, `inputMode`, ≥16px font)
+  - Session: `gs_token` cookie (`context/UserContext.tsx`) after any successful method
+  - Display name resolution (`lib/displayName.ts`, `users.name_source`): plan cookie → email local part → Google profile `given_name`
+  - `/auth/signup` redirects to sign-in; new accounts created on first successful sign-in
+- **Sacred:** anonymous `/p/*` respond never requires phone, email, or any account
 
 ### Admin
 - PIN-protected admin panel at `/admin`
@@ -128,8 +138,20 @@ VAPID_PRIVATE_KEY=your_vapid_private_key            # Web Push (server — never
 VAPID_SUBJECT=mailto:hello@hangout-friends.vercel.app  # optional Web Push contact URI
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=your_vapid_public_key  # same public key for browser subscribe
 CRON_SECRET=your_cron_secret                        # secures /api/cron/* (Vercel Cron sends Bearer token)
-RESEND_API_KEY=your_resend_api_key                  # optional — magic link emails (HGT-11/13)
-RESEND_FROM="Hangout <hello@yourdomain.com>"        # optional — sender for magic link emails
+RESEND_API_KEY=re_xxxxxxxx                          # required in Production — magic link emails (from resend.com/api-keys)
+RESEND_FROM="Hangout <auth@mail.tryhangout.com>"    # optional; this is the default if omitted
+# Phone sign-in (HGT-93) — add when implementing SMS OTP, e.g. Twilio:
+# TWILIO_ACCOUNT_SID=...
+# TWILIO_AUTH_TOKEN=...
+# TWILIO_VERIFY_SERVICE_SID=...   # or SMS send number
+# Apple Sign In (HGT-97) — add when implementing:
+# APPLE_CLIENT_ID=...
+# APPLE_TEAM_ID=...
+
+**Magic link email (Resend)** — Domain `mail.tryhangout.com` must be verified in the [Resend dashboard](https://resend.com/domains). Local dev: add `RESEND_API_KEY` to `.env.local` and restart `npm run dev`. Production: add the same vars in Vercel → Project → Settings → Environment Variables (Production + Development). Default sender is `auth@mail.tryhangout.com` (see `lib/sendEmail.ts`); override with `RESEND_FROM` if you use a different mailbox on that domain.
+# APPLE_KEY_ID=...
+# APPLE_PRIVATE_KEY=...           # .p8 contents or path
+# Google SSO (HGT-96) — may use separate OAuth client from Calendar; see GOOGLE_CALENDAR.md
 ```
 
 Generate Web Push VAPID keys with:
@@ -292,6 +314,21 @@ Synced with [Linear](https://linear.app/hangout-friends). Full agent/QA breakdow
 
 Dev verification: `npm run verify:021` · `npm run test:plan-loop` · `npm run build`
 
+### Active — multi-method auth (HGT-91, v1 MVP)
+
+Parent: **[HGT-91](https://linear.app/hangout-friends/issue/HGT-91/multi-method-account-sign-in-v1-mvp)** — implement soon; stub at `/auth/signin/options`.
+
+| Issue | Method |
+|-------|--------|
+| **HGT-92** | UI: primary email + phone tabs; alternatives page; Autofill attributes |
+| **HGT-93** | Phone number (SMS OTP) — co-primary with email |
+| **HGT-94** | Password (email + password) |
+| **HGT-95** | Passkey / WebAuthn (biometric, YubiKey) |
+| **HGT-96** | Google SSO (identity OAuth — separate from Calendar) |
+| **HGT-97** | Apple Sign In |
+
+Supersedes canceled post-v1 tickets HGT-78 (password) and HGT-79 (Google). See [PRODUCT.md](./PRODUCT.md) §9.
+
 ### Sprint 4 — human validation (not started)
 
 1. **HGT-17** — 5-friend mobile Safari teardown
@@ -301,6 +338,32 @@ Dev verification: `npm run verify:021` · `npm run test:plan-loop` · `npm run b
 
 ### Wave 4 — shipped (PR #8, May 29)
 
-- **HGT-11/13** — Magic link at `/auth/signin` (migration `024`); accounts are email + magic link only
+- **HGT-11/13** — Magic link at `/auth/signin` (migration `024`); extended by **HGT-91** multi-method auth
 - **HGT-22** — Top-3 auto-schedule: preview `POST /schedule` → confirm with `slot_key` + `idea_id`
 - **HGT-29** — Calendar busy pre-fill on plan grid (verify UI vs [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md))
+
+### Performance & Optimization (May 31 audit)
+
+**Guiding doc:** [PERFORMANCE.md](./PERFORMANCE.md) — workflow (continuous on sacred path, bursty on stack), agent checklist, anti-patterns. **All agents must read before touching plan routes or root layout.**
+
+Linear project: [Performance & Optimization](https://linear.app/hangout-friends/project/performance-and-optimization-7d4bb0096259). Baseline doc: [Performance audit baseline (May 2026)](https://linear.app/hangout-friends/document/performance-audit-baseline-may-2026-e45be4a75392).
+
+**North star:** be the fast option in group scheduling — speed is a product feature on the anonymous `/p/[slug]` path (PRODUCT.md: <1s load on 4G, <30s to mark availability).
+
+**Critical path today:** SSR resolves slug → id only → client hydrates → parallel fetches to `/api/polls/[id]` + `/api/polls/[id]/ideas` before content appears. Google Maps JS loads globally from root layout even on plan links.
+
+**Top issues filed (priority order):**
+
+| Issue | What |
+|-------|------|
+| **HGT-82** | Remove global Google Maps JS from root layout |
+| **HGT-83** | SSR initial poll data on `/p/[slug]` — eliminate client waterfall |
+| **HGT-84** | DB indexes on `poll_responses`, `poll_rsvps`, `poll_idea_votes` |
+| **HGT-85** | Lazy-load ideas board below the fold |
+| **HGT-86** | Lightweight layout for `/p/*` (skip app chrome JS) |
+| **HGT-87** | Deduplicate server-side DB queries on slug page |
+| **HGT-89** | Slim poll GET API payload |
+| **HGT-90** | Performance baseline + monitoring targets |
+| **HGT-88** | Remove unused `date-fns` / `rrule` deps |
+
+**Already good:** nav hidden on plan pages, Speed Insights wired, OG on Edge, slug index, save-as-you-go grid, lean first-party JS chunks.

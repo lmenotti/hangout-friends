@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
-import { getAppBaseUrl } from '@/lib/appUrl'
+import { buildMagicLinkEmail, buildMagicLinkUrl } from '@/lib/magicLinkEmail'
 import { sendEmail } from '@/lib/sendEmail'
 import { MAGIC_LINK_TTL_MS, normalizeEmail, sanitizeReturnTo } from '@/lib/magicLink'
 
@@ -29,24 +29,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: insertError.message }, { status: 500 })
   }
 
-  const baseUrl = getAppBaseUrl()
-  const link = `${baseUrl}/auth/magic-link?token=${encodeURIComponent(token)}`
-
-  const subject = 'Sign in to Hangout'
-  const text = [
-    'Tap the link below to sign in to Hangout:',
-    '',
-    link,
-    '',
-    'This link expires in 15 minutes. If you did not request this, you can ignore this email.',
-  ].join('\n')
-
-  const html = `
-    <p>Hi,</p>
-    <p>Tap below to sign in to Hangout:</p>
-    <p><a href="${escapeHtml(link)}">Sign in to Hangout</a></p>
-    <p style="color:#71717a;font-size:14px;">This link expires in 15 minutes. If you did not request this, you can ignore this email.</p>
-  `
+  const link = buildMagicLinkUrl(token, returnTo !== '/profile' ? returnTo : undefined)
+  const { subject, html, text } = buildMagicLinkEmail({ link })
 
   try {
     const result = await sendEmail({ to: email, subject, html, text })
@@ -60,14 +44,15 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     await supabase.from('magic_link_tokens').delete().eq('token', token)
     const message = err instanceof Error ? err.message : 'Failed to send email'
-    return NextResponse.json({ error: message }, { status: 500 })
+    const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production'
+    const status = isProd && message.includes('RESEND_API_KEY') ? 503 : 500
+    return NextResponse.json(
+      {
+        error: isProd && message.includes('RESEND_API_KEY')
+          ? 'Sign-in email is temporarily unavailable. Please try again later.'
+          : message,
+      },
+      { status },
+    )
   }
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
 }
