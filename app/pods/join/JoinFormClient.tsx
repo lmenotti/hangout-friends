@@ -53,7 +53,7 @@ function JoinForm() {
           value={code}
           onChange={e => setCode(e.target.value.toUpperCase())}
           placeholder="Invite code (e.g. AB12CD)"
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm font-mono tracking-widest uppercase"
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm font-mono tracking-widest"
           maxLength={8}
           autoFocus
         />
