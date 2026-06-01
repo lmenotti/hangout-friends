@@ -3,20 +3,38 @@ import { supabaseAdmin as supabase } from '@/lib/supabase'
 
 async function getUserFromToken(token: string | null) {
   if (!token) return null
-  const { data } = await supabase.from('users').select().eq('token', token).single()
+  const { data } = await supabase.from('users').select('id, name').eq('token', token).single()
   return data
+}
+
+async function getUserPodIds(userId: string): Promise<string[]> {
+  const { data } = await supabase.from('pod_members').select('pod_id').eq('user_id', userId)
+  return (data ?? []).map((m) => m.pod_id)
 }
 
 export async function GET(req: NextRequest) {
   const token = req.headers.get('x-user-token')
   const user = await getUserFromToken(token)
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: events, error } = await supabase
-    .from('events')
-    .select('*, rsvps(user_id, status)')
-    .order('scheduled_at', { ascending: true })
+  const podIds = await getUserPodIds(user.id)
 
+  const eventSelect = '*, rsvps(user_id, status)'
+  const [globalRes, podRes] = await Promise.all([
+    supabase.from('events').select(eventSelect).is('pod_id', null).order('scheduled_at', { ascending: true }),
+    podIds.length > 0
+      ? supabase.from('events').select(eventSelect).in('pod_id', podIds).order('scheduled_at', { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+  ])
+
+  const error = globalRes.error ?? podRes.error
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const events = [...(globalRes.data ?? []), ...(podRes.data ?? [])].sort((a, b) => {
+    const at = a.scheduled_at ? new Date(a.scheduled_at).getTime() : 0
+    const bt = b.scheduled_at ? new Date(b.scheduled_at).getTime() : 0
+    return at - bt
+  })
 
   // Resolve RSVP user names separately to avoid FK ambiguity
   const allUserIds = [...new Set(

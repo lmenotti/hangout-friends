@@ -3,8 +3,13 @@ import { supabaseAdmin as supabase } from '@/lib/supabase'
 
 async function getUserFromToken(token: string | null) {
   if (!token) return null
-  const { data } = await supabase.from('users').select().eq('token', token).single()
+  const { data } = await supabase.from('users').select('id, name, home_location').eq('token', token).single()
   return data
+}
+
+async function getUserPodIds(userId: string): Promise<string[]> {
+  const { data } = await supabase.from('pod_members').select('pod_id').eq('user_id', userId)
+  return (data ?? []).map((m) => m.pod_id)
 }
 
 async function fetchTravelTimes(destination: string, origin: string): Promise<{ car: number | null; transit: number | null; walk: number | null }> {
@@ -40,18 +45,40 @@ async function fetchTravelTimes(destination: string, origin: string): Promise<{ 
 export async function GET(req: NextRequest) {
   const token = req.headers.get('x-user-token')
   const user = await getUserFromToken(token)
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: ideas, error } = await supabase
-    .from('ideas')
-    .select('id, title, description, created_by, created_at, duration_minutes, is_outdoor, location, travel_car_minutes, travel_transit_minutes, travel_walk_minutes, is_scheduled, suggested_at, travel_origin')
-    .eq('is_scheduled', false)
-    .order('created_at', { ascending: false })
+  const podIds = await getUserPodIds(user.id)
+  const ideaSelect =
+    'id, title, description, created_by, created_at, duration_minutes, is_outdoor, location, travel_car_minutes, travel_transit_minutes, travel_walk_minutes, is_scheduled, suggested_at, travel_origin'
 
+  const [globalRes, podRes] = await Promise.all([
+    supabase
+      .from('ideas')
+      .select(ideaSelect)
+      .is('pod_id', null)
+      .eq('is_scheduled', false)
+      .order('created_at', { ascending: false }),
+    podIds.length > 0
+      ? supabase
+          .from('ideas')
+          .select(ideaSelect)
+          .in('pod_id', podIds)
+          .eq('is_scheduled', false)
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+  ])
+
+  const error = globalRes.error ?? podRes.error
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const { data: votes } = await supabase
-    .from('idea_votes')
-    .select('idea_id, user_id, users(name)')
+  const ideas = [...(globalRes.data ?? []), ...(podRes.data ?? [])].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
+
+  const ideaIds = ideas.map((i) => i.id)
+  const { data: votes } = ideaIds.length > 0
+    ? await supabase.from('idea_votes').select('idea_id, user_id, users(name)').in('idea_id', ideaIds)
+    : { data: [] }
 
   const creatorIds = [...new Set((ideas ?? []).map((i: any) => i.created_by).filter(Boolean))]
   const { data: creators } = creatorIds.length > 0

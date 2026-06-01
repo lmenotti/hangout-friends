@@ -7,10 +7,17 @@ async function getUserFromToken(token: string | null) {
   return data
 }
 
+async function assertMember(podId: string, userId: string) {
+  const { data } = await supabase.from('pod_members').select('role').eq('pod_id', podId).eq('user_id', userId).single()
+  return data
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string; ideaId: string }> }) {
   const { id: podId, ideaId } = await params
   const user = await getUserFromToken(req.headers.get('x-user-token'))
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!user || !await assertMember(podId, user.id)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   const { scheduled_at, end_time, location, recurrence_rule, recurrence_end } = await req.json()
   if (!scheduled_at) return NextResponse.json({ error: 'scheduled_at required' }, { status: 400 })

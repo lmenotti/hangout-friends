@@ -3,25 +3,41 @@ import { supabaseAdmin as supabase } from '@/lib/supabase'
 
 async function getUserFromToken(token: string | null) {
   if (!token) return null
-  const { data } = await supabase.from('users').select().eq('token', token).single()
+  const { data } = await supabase.from('users').select('id, name').eq('token', token).single()
+  return data
+}
+
+async function assertMember(podId: string, userId: string) {
+  const { data } = await supabase
+    .from('pod_members')
+    .select('role')
+    .eq('pod_id', podId)
+    .eq('user_id', userId)
+    .single()
   return data
 }
 
 export async function GET(req: NextRequest) {
   const token = req.headers.get('x-user-token')
   const user = await getUserFromToken(token)
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const podId = req.nextUrl.searchParams.get('pod_id')
 
   let allUsers: { id: string; name: string }[] = []
   if (podId) {
+    if (!await assertMember(podId, user.id)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const { data: members } = await supabase
       .from('pod_members')
       .select('users(id, name)')
       .eq('pod_id', podId)
-    allUsers = (members ?? []).map((m: any) => m.users).filter(Boolean)
+    allUsers = ((members ?? []) as unknown as { users: { id: string; name: string } | null }[])
+      .map((m) => m.users)
+      .filter((u): u is { id: string; name: string } => Boolean(u))
   } else {
-    const { data } = await supabase.from('users').select('id, name').order('name')
-    allUsers = data ?? []
+    allUsers = [{ id: user.id, name: user.name }]
   }
 
   const userIds = allUsers.map(u => u.id)

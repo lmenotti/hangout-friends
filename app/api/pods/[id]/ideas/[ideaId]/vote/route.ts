@@ -7,10 +7,17 @@ async function getUserFromToken(token: string | null) {
   return data
 }
 
+async function assertMember(podId: string, userId: string) {
+  const { data } = await supabase.from('pod_members').select('role').eq('pod_id', podId).eq('user_id', userId).single()
+  return data
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string; ideaId: string }> }) {
-  const { ideaId } = await params
+  const { id: podId, ideaId } = await params
   const user = await getUserFromToken(req.headers.get('x-user-token'))
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!user || !await assertMember(podId, user.id)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   const { data: existing } = await supabase
     .from('idea_votes')
@@ -21,8 +28,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (existing) {
     await supabase.from('idea_votes').delete().eq('idea_id', ideaId).eq('user_id', user.id)
-    await supabase.from('ideas').update({ vote_count: supabase.rpc as any }).eq('id', ideaId)
-    // Decrement vote_count
     const { data: idea } = await supabase.from('ideas').select('vote_count').eq('id', ideaId).single()
     await supabase.from('ideas').update({ vote_count: Math.max(0, (idea?.vote_count ?? 1) - 1) }).eq('id', ideaId)
     return NextResponse.json({ voted: false })
