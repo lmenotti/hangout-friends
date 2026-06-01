@@ -350,7 +350,7 @@ Linear project: [Performance & Optimization](https://linear.app/hangout-friends/
 
 **North star:** be the fast option in group scheduling — speed is a product feature on the anonymous `/p/[slug]` path (PRODUCT.md: <1s load on 4G, <30s to mark availability).
 
-**Critical path today:** SSR resolves slug → id only → client hydrates → parallel fetches to `/api/polls/[id]` + `/api/polls/[id]/ideas` before content appears. Google Maps JS loads globally from root layout even on plan links.
+**Critical path today:** `/p/[slug]` SSR passes `initialData` (HGT-83/87 done); ideas may still client-fetch. **Still open:** global Google Maps JS in root layout (HGT-82), below-fold lazy load (HGT-85), lightweight plan layout (HGT-86).
 
 **Top issues filed (priority order):**
 
