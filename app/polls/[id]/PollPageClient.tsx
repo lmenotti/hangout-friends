@@ -6,19 +6,11 @@ import PollIdeasBoard, { type PollIdea } from '@/components/PollIdeasBoard'
 import { formatScheduledLabel } from '@/lib/formatScheduledLabel'
 import { buildGoogleCalendarUrl, calendarEventFromPoll } from '@/lib/ics'
 import { useUser } from '@/context/UserContext'
+import type { PlanPageInitialData, PlanPagePoll, PlanPageResponse, PlanPageRsvp } from '@/lib/planPageTypes'
 
-type Poll = {
-  id: string
-  title: string
-  creator_name: string
-  date_options: string[]
-  status: 'polling' | 'scheduled'
-  scheduled_at: string | null
-  scheduled_end_at: string | null
-  scheduled_slot_key: string | null
-}
-type Response = { id: string; respondent_name: string; availability: Record<string, boolean> }
-type PollRsvp = { respondent_name: string; status: 'yes' | 'maybe' | 'no' }
+type Poll = PlanPagePoll
+type Response = PlanPageResponse
+type PollRsvp = PlanPageRsvp
 type ScheduledIdea = { id: string; title: string; location: string | null }
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -71,18 +63,22 @@ function computeAggregate(responses: Response[]): Record<string, number> {
 export default function PollPageClient({
   id,
   autoFillAvailability = false,
+  initialData,
 }: {
   id: string
   autoFillAvailability?: boolean
+  initialData?: PlanPageInitialData
 }) {
-  const [poll, setPoll] = useState<Poll | null>(null)
-  const [scheduledIdea, setScheduledIdea] = useState<ScheduledIdea | null>(null)
-  const [responses, setResponses] = useState<Response[]>([])
-  const [rsvps, setRsvps] = useState<PollRsvp[]>([])
-  const [ideas, setIdeas] = useState<PollIdea[]>([])
-  const [aggregate, setAggregate] = useState<Record<string, number>>({})
-  const [loading, setLoading] = useState(true)
-  const [isCreator, setIsCreator] = useState(false)
+  const [poll, setPoll] = useState<Poll | null>(initialData?.poll ?? null)
+  const [scheduledIdea, setScheduledIdea] = useState<ScheduledIdea | null>(
+    initialData?.scheduled_idea ?? null,
+  )
+  const [responses, setResponses] = useState<Response[]>(initialData?.responses ?? [])
+  const [rsvps, setRsvps] = useState<PollRsvp[]>(initialData?.rsvps ?? [])
+  const [ideas, setIdeas] = useState<PollIdea[]>(initialData?.ideas ?? [])
+  const [aggregate, setAggregate] = useState<Record<string, number>>(initialData?.aggregate ?? {})
+  const [loading, setLoading] = useState(!initialData)
+  const [isCreator, setIsCreator] = useState(initialData?.is_creator ?? false)
 
   const [name, setName] = useState('')
   const [mySlots, setMySlots] = useState<Set<string>>(new Set())
@@ -161,15 +157,20 @@ export default function PollPageClient({
   }, [id])
 
   useEffect(() => {
-    Promise.all([fetchPoll(), fetchIdeas()]).finally(() => setLoading(false))
-
     const storedTapMode = localStorage.getItem('poll_tap_mode')
     if (storedTapMode !== null) {
       setTapMode(storedTapMode === '1')
     } else if (window.matchMedia('(max-width: 768px)').matches) {
       setTapMode(true)
     }
-  }, [fetchPoll, fetchIdeas])
+
+    if (initialData) {
+      applyReturningIdentity(initialData.plan_identity, initialData.responses)
+      return
+    }
+
+    Promise.all([fetchPoll(), fetchIdeas()]).finally(() => setLoading(false))
+  }, [fetchPoll, fetchIdeas, initialData, applyReturningIdentity])
 
   // After plan creation (?fill=1), open the grid once identity cookie + name are ready.
   useEffect(() => {

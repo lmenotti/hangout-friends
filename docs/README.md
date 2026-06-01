@@ -53,6 +53,7 @@ The atomic unit is a **plan**: a shareable URL anyone can respond to without cre
 | Google Calendar | HGT-29/34 | OAuth routes live; prod smoke test deferred |
 | Push | HGT-28 | migration 023, service worker, 3 allowlisted types; `PushNotificationPrompt` + `/api/push/watches` (httpOnly plan cookie reads for `plan_watches`) |
 | Perf (phase 1) | HGT-84/88/110/112 | migration 027 (`poll_responses`, `idea_votes` indexes); filtered `idea_votes` in auto-schedule; client-safe `lib/formatScheduledLabel.ts`; removed unused `date-fns`/`rrule` |
+| Perf (phase 2) | HGT-83/87 | `/p/[slug]` SSR passes `initialData` to `PollPageClient` via `lib/planPageData.ts`; `getPollBySlug` wrapped in `cache()` for metadata dedupe. Measure: `node scripts/measure-plan-page.mjs <slug> <poll-id>` |
 
 Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo but are off nav. Orphaned global components removed. Pods exist but are frozen for MVP validation.
 

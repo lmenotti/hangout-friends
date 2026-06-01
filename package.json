@@ -8,6 +8,7 @@
     "migrate": "node scripts/migrate.mjs",
     "verify:021": "node scripts/verify-migration-021.mjs",
     "test:plan-loop": "node scripts/test-plan-loop.mjs",
+    "measure:plan-page": "node scripts/measure-plan-page.mjs",
     "start": "next start",
     "lint": "eslint"
   },
