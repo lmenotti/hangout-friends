@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { appendPlanIdentityCookie } from '@/lib/planIdentity'
+import { generateCreatorToken, appendCreatorCookie } from '@/lib/planCreator'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 
 const PLAN_RETENTION_DAYS = 30
@@ -51,6 +52,20 @@ export async function POST(req: NextRequest) {
   const resolvedExpiresAt =
     expires_at ?? computeExpiresAtFromDateOptions(date_options as string[])
 
+  // Resolve creator_user_id if a signed-in user is creating the plan.
+  let creatorUserId: string | null = null
+  const userToken = req.headers.get('x-user-token')
+  if (userToken) {
+    const { data: user } = await supabase
+      .from('users')
+      .select('id')
+      .eq('token', userToken)
+      .single()
+    creatorUserId = user?.id ?? null
+  }
+
+  const creatorToken = generateCreatorToken()
+
   let data: unknown = null
   let error: unknown = null
   try {
@@ -63,6 +78,8 @@ export async function POST(req: NextRequest) {
         date_options,
         expires_at: resolvedExpiresAt,
         slug,
+        creator_token: creatorToken,
+        creator_user_id: creatorUserId,
       })
       .select()
       .single())
@@ -81,9 +98,12 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     )
   }
+
+  const pollId = (data as { id: string }).id
   const res = NextResponse.json(data)
-  if (creator_name?.trim() && data && typeof data === 'object' && 'id' in data) {
-    appendPlanIdentityCookie(res, String((data as { id: string }).id), creator_name.trim())
+  if (creator_name?.trim()) {
+    appendPlanIdentityCookie(res, pollId, creator_name.trim())
   }
+  appendCreatorCookie(res, pollId, creatorToken)
   return res
 }

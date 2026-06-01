@@ -5,6 +5,7 @@ import {
   formatScheduledLabel,
   type RankedScheduleCandidate,
 } from '@/lib/pollSchedule'
+import { isCreatorByRequest } from '@/lib/planCreator'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 
 function serializeCandidate(c: RankedScheduleCandidate) {
@@ -64,6 +65,9 @@ async function loadScheduleContext(pollId: string) {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: pollId } = await params
 
+  // Clone before reading body so we can also read cookies (req is consumed once).
+  const cloned = req.clone() as NextRequest
+
   let slotKey: string | undefined
   let ideaId: string | undefined
   try {
@@ -80,6 +84,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const ctx = await loadScheduleContext(pollId)
   if ('error' in ctx && ctx.error) return ctx.error
   const { poll, dateOptions, responses, ideasWithVoters } = ctx
+
+  if (!isCreatorByRequest(cloned, pollId, poll.creator_token ?? null)) {
+    return NextResponse.json({ error: 'Only the plan creator can schedule.' }, { status: 403 })
+  }
 
   const candidates = await findTopPollScheduleCandidates({
     dateOptions,

@@ -29,7 +29,7 @@ function nextSevenDays(): Set<string> {
 
 export default function NewPollPage() {
   const router = useRouter()
-  const { user } = useUser()
+  const { user, token } = useUser()
   const [title, setTitle] = useState('')
   const [creatorName, setCreatorName] = useState('')
   const [selectedDates, setSelectedDates] = useState<Set<string>>(nextSevenDays)
@@ -74,9 +74,12 @@ export default function NewPollPage() {
     setSubmitting(true)
     setError('')
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['x-user-token'] = token
+
       const res = await fetch('/api/polls', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'same-origin',
         body: JSON.stringify({
           title: title.trim(),

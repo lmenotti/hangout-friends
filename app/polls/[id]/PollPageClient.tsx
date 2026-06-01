@@ -82,6 +82,7 @@ export default function PollPageClient({
   const [ideas, setIdeas] = useState<PollIdea[]>([])
   const [aggregate, setAggregate] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
+  const [isCreator, setIsCreator] = useState(false)
 
   const [name, setName] = useState('')
   const [mySlots, setMySlots] = useState<Set<string>>(new Set())
@@ -149,6 +150,7 @@ export default function PollPageClient({
     setAggregate(data.aggregate)
     setRsvps(data.rsvps ?? [])
     setScheduledIdea(data.scheduled_idea ?? null)
+    setIsCreator(data.is_creator ?? false)
     applyReturningIdentity(data.plan_identity, data.responses)
   }, [id, applyReturningIdentity])
 
@@ -758,7 +760,7 @@ export default function PollPageClient({
             onNeedName={() => setNameRequired(true)}
           />
 
-          {!scheduleOptions ? (
+          {isCreator && !scheduleOptions ? (
             <button
               type="button"
               onClick={handleAutoSchedule}
@@ -767,7 +769,7 @@ export default function PollPageClient({
             >
               {scheduling ? 'Finding options…' : 'Auto-schedule'}
             </button>
-          ) : (
+          ) : scheduleOptions ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-sm font-medium text-zinc-300">Pick a time</h2>
@@ -826,8 +828,8 @@ export default function PollPageClient({
                 {scheduling ? 'Locking in…' : 'Confirm this time'}
               </button>
             </div>
-          )}
-          {!scheduleOptions && (
+          ) : null}
+          {!scheduleOptions && isCreator && (
             <p className="text-xs text-zinc-600 text-center -mt-4">
               Shows top matches by overlap (needs ideas with 2+ votes).
             </p>
