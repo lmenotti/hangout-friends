@@ -207,18 +207,38 @@ export async function listBusyTimes(
 ): Promise<BusyInterval[]> {
   const calendar = await getAuthenticatedCalendarClient(userId)
 
+  // Include all user-selected calendars so events on shared/group calendars
+  // (not just primary) block the correct slots.
+  const listRes = await calendar.calendarList.list({ minAccessRole: 'freeBusyReader' })
+  const items = (listRes.data.items ?? [])
+    .filter((c) => c.selected !== false && c.id)
+    .map((c) => ({ id: c.id! }))
+
+  if (items.length === 0) items.push({ id: 'primary' })
+
   const result = await calendar.freebusy.query({
-    requestBody: {
-      timeMin,
-      timeMax,
-      items: [{ id: 'primary' }],
-    },
+    requestBody: { timeMin, timeMax, items },
   })
 
-  const busy = result.data.calendars?.primary?.busy ?? []
-  return busy
-    .filter((block): block is { start: string; end: string } => Boolean(block.start && block.end))
-    .map((block) => ({ start: block.start, end: block.end }))
+  const allBusy: BusyInterval[] = []
+  for (const calData of Object.values(result.data.calendars ?? {})) {
+    for (const block of calData.busy ?? []) {
+      if (block.start && block.end) allBusy.push({ start: block.start, end: block.end })
+    }
+  }
+
+  // Sort and merge overlapping intervals before returning.
+  allBusy.sort((a, b) => a.start.localeCompare(b.start))
+  const merged: BusyInterval[] = []
+  for (const interval of allBusy) {
+    const last = merged[merged.length - 1]
+    if (last && interval.start <= last.end) {
+      if (interval.end > last.end) last.end = interval.end
+    } else {
+      merged.push({ ...interval })
+    }
+  }
+  return merged
 }
 
 function getStateSecret(): string {

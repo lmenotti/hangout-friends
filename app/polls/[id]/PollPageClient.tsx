@@ -180,8 +180,15 @@ export default function PollPageClient({
     setEditing(true)
   }, [loading, name, poll?.status])
 
+  // Reset the calendar fetch guard when editing closes so re-opening the grid
+  // after a calendar change (webhook-invalidated cache) picks up fresh data.
+  useEffect(() => {
+    if (!editing) calendarFetchedRef.current = false
+  }, [editing])
+
   // When editing starts for a signed-in user, fetch their Google Calendar busy times and
-  // pre-fill the grid. Only runs once per component lifecycle (calendarFetchedRef guard).
+  // pre-fill the grid. Guarded by calendarFetchedRef to prevent duplicate fetches within
+  // a single edit session; reset above when editing closes.
   useEffect(() => {
     if (!editing || !token || !poll || calendarFetchedRef.current) return
     calendarFetchedRef.current = true
