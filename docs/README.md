@@ -114,7 +114,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 NEXT_PUBLIC_BASE_URL=http://localhost:3000          # canonical app origin (no trailing slash)
-ADMIN_PIN=your_admin_pin
+ADMIN_PIN=your_admin_pin          # required for admin API routes in prod/preview; no default — set in Vercel (sensitive in prod/preview)
 SUPABASE_ACCESS_TOKEN=your_supabase_personal_access_token
 GOOGLE_MAPS_API_KEY=your_google_maps_key            # optional — enables travel time estimates
 ANTHROPIC_API_KEY=your_anthropic_key                # optional — enables Claude fix suggestions in admin
@@ -140,6 +140,8 @@ npx web-push generate-vapid-keys
 `SUPABASE_SERVICE_ROLE_KEY` is the service role secret from your Supabase project's API settings. **Never prefix this with `NEXT_PUBLIC_`** — it must remain server-only. All API routes use this key via `supabaseAdmin` in `lib/supabase.ts`, which bypasses RLS. The anon key is retained only for public-read Server Components.
 
 `SUPABASE_ACCESS_TOKEN` is a personal access token from [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens). Used by the migration runner at build time.
+
+**`ADMIN_PIN`** — Protects `/api/admin`, `/api/claude-fix`, and admin `PATCH` on `/api/bug-reports/[id]`. There is **no code default**; routes return **503** if unset or weak (`1234`, `0000`, `admin`). Send the PIN in the `x-admin-pin` header. In Vercel: **Sensitive** for Production and Preview; **plain** (non-sensitive) on Development so `vercel env pull` works locally. Never commit the value.
 
 ### Google Calendar OAuth
 
@@ -190,6 +192,8 @@ npm run build              # runs migrations then builds
 Applied migrations are tracked in a `_migrations` table. New files are picked up automatically on the next deploy. Never edit an already-applied migration — add a new numbered file instead.
 
 `_migrations` has RLS enabled with no policies, which locks it to deny-all for every PostgREST client role. The migration runner connects via a direct Postgres connection (service role), so it bypasses RLS and is unaffected.
+
+**Migration `026_tighten_rls_users_and_remaining.sql` (HGT-109):** Drops anon `SELECT` on `users` (session tokens, email, Google OAuth fields were exposed via PostgREST). Drops remaining permissive mutation policies on polls, poll_responses, pods, pod_members, bug_reports, and `events` update — extending the `020` pattern. Enables RLS on `google_calendar_channels` with no policies (deny-all for anon; API uses service role). Public reads on plan/poll/pod/availability tables are unchanged for the link-first flow.
 
 ---
 

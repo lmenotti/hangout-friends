@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { checkAdminPin, isAdminPinConfigured } from '@/lib/adminPin'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 
-const ADMIN_PIN = (process.env.ADMIN_PIN ?? '1234').trim()
-
-function checkPin(req: NextRequest) {
-  return (req.headers.get('x-admin-pin') ?? '').trim() === ADMIN_PIN
+function requireAdminPin(req: NextRequest): NextResponse | null {
+  if (!isAdminPinConfigured()) {
+    return NextResponse.json(
+      { error: 'Admin PIN is not configured on this server.' },
+      { status: 503 },
+    )
+  }
+  if (!checkAdminPin(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  return null
 }
 
 export async function GET(req: NextRequest) {
-  if (!checkPin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authError = requireAdminPin(req)
+  if (authError) return authError
 
   const [usersRes, ideasRes, eventsRes, bugsRes] = await Promise.all([
     supabase.from('users').select('id, name, created_at').order('created_at', { ascending: false }),
@@ -47,7 +56,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!checkPin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authError = requireAdminPin(req)
+  if (authError) return authError
 
   const { type, id } = await req.json()
 

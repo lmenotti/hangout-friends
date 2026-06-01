@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const ADMIN_PIN = (process.env.ADMIN_PIN ?? '1234').trim()
+import { checkAdminPin, isAdminPinConfigured } from '@/lib/adminPin'
 
 export async function POST(req: NextRequest) {
-  if ((req.headers.get('x-admin-pin') ?? '').trim() !== ADMIN_PIN) {
+  if (!isAdminPinConfigured()) {
+    return NextResponse.json(
+      { error: 'Admin PIN is not configured on this server.' },
+      { status: 503 },
+    )
+  }
+  if (!checkAdminPin(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

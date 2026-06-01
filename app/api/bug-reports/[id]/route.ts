@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { checkAdminPin, isAdminPinConfigured } from '@/lib/adminPin'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 
-const ADMIN_PIN = (process.env.ADMIN_PIN ?? '1234').trim()
-
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if ((req.headers.get('x-admin-pin') ?? '').trim() !== ADMIN_PIN) {
+  if (!isAdminPinConfigured()) {
+    return NextResponse.json(
+      { error: 'Admin PIN is not configured on this server.' },
+      { status: 503 },
+    )
+  }
+  if (!checkAdminPin(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
