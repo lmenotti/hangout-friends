@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { appendLastPlanSlugCookie } from '@/lib/lastPlan'
 import { appendPlanIdentityCookie } from '@/lib/planIdentity'
 import { generateCreatorToken, appendCreatorCookie } from '@/lib/planCreator'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
@@ -99,11 +100,12 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const pollId = (data as { id: string }).id
+  const poll = data as { id: string; slug: string }
   const res = NextResponse.json(data)
   if (creator_name?.trim()) {
-    appendPlanIdentityCookie(res, pollId, creator_name.trim())
+    appendPlanIdentityCookie(res, poll.id, creator_name.trim())
   }
-  appendCreatorCookie(res, pollId, creatorToken)
+  appendCreatorCookie(res, poll.id, creatorToken)
+  if (poll.slug) appendLastPlanSlugCookie(res, poll.slug)
   return res
 }

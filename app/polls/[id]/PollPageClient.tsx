@@ -92,7 +92,11 @@ export default function PollPageClient({
   const [selectedScheduleKey, setSelectedScheduleKey] = useState<string | null>(null)
   const [rsvpSubmitting, setRsvpSubmitting] = useState(false)
   const [inspectedSlot, setInspectedSlot] = useState<string | null>(null)
-  const [heatmapFilter, setHeatmapFilter] = useState<'all' | '80plus'>('all')
+  const [heatmapFilter, setHeatmapFilter] = useState<'all' | '80plus' | 'everyone'>('all')
+  const [linkCopied, setLinkCopied] = useState(false)
+  const [editingCreatorName, setEditingCreatorName] = useState(false)
+  const [creatorNameDraft, setCreatorNameDraft] = useState('')
+  const [creatorNameSaving, setCreatorNameSaving] = useState(false)
 
   const [calendarBaseline, setCalendarBaseline] = useState<Set<string> | null>(null)
   const [calendarFetching, setCalendarFetching] = useState(false)
@@ -301,15 +305,15 @@ export default function PollPageClient({
 
   const getSlotBreakdown = useCallback((slotKey: string) => {
     const free: string[] = []
-    const notFree: string[] = []
+    const busy: string[] = []
+    const noMark: string[] = []
     for (const r of responses) {
-      if (r.availability?.[slotKey]) {
-        free.push(r.respondent_name)
-      } else {
-        notFree.push(r.respondent_name)
-      }
+      const v = r.availability?.[slotKey]
+      if (v === true) free.push(r.respondent_name)
+      else if (v === false) busy.push(r.respondent_name)
+      else noMark.push(r.respondent_name)
     }
-    return { free, notFree }
+    return { free, busy, noMark }
   }, [responses])
 
   const handleNameSubmit = (e: React.FormEvent) => {
@@ -411,7 +415,39 @@ export default function PollPageClient({
       return { label, count }
     })
 
-  const copyLink = () => { navigator.clipboard.writeText(window.location.href) }
+  const copyLink = () => {
+    void navigator.clipboard.writeText(window.location.href).then(() => {
+      setLinkCopied(true)
+      window.setTimeout(() => setLinkCopied(false), 2000)
+    })
+  }
+
+  const saveCreatorName = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmed = creatorNameDraft.trim()
+    if (!trimmed) return
+    setCreatorNameSaving(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/polls/${id}/creator-name`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ name: trimmed }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setPoll(p => (p ? { ...p, creator_name: data.creator_name } : p))
+      setName(data.creator_name)
+      identityHydratedRef.current = true
+      setEditingCreatorName(false)
+      await fetchPoll()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not update name.')
+    } finally {
+      setCreatorNameSaving(false)
+    }
+  }
 
   const myRsvp = name.trim()
     ? rsvps.find(r => r.respondent_name.toLowerCase() === name.trim().toLowerCase())?.status ?? null
@@ -476,6 +512,43 @@ export default function PollPageClient({
           <p className="text-sm text-zinc-500 mt-0.5">
             Created by {poll.creator_name} · {responses.length} response{responses.length !== 1 ? 's' : ''}
           </p>
+          {isCreator && !editingCreatorName && (
+            <button
+              type="button"
+              onClick={() => {
+                setCreatorNameDraft(poll.creator_name)
+                setEditingCreatorName(true)
+              }}
+              className="text-xs text-indigo-400 hover:text-indigo-300 mt-1 touch-manipulation"
+            >
+              Fix your name typo
+            </button>
+          )}
+          {isCreator && editingCreatorName && (
+            <form onSubmit={saveCreatorName} className="flex gap-2 mt-2 flex-wrap items-center">
+              <input
+                value={creatorNameDraft}
+                onChange={e => setCreatorNameDraft(e.target.value)}
+                maxLength={40}
+                autoComplete="given-name"
+                className="flex-1 min-w-[8rem] bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+              <button
+                type="submit"
+                disabled={creatorNameSaving || !creatorNameDraft.trim()}
+                className="px-3 py-2 text-xs font-medium rounded-lg bg-indigo-600 text-white disabled:opacity-40"
+              >
+                {creatorNameSaving ? 'Saving…' : 'Save'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingCreatorName(false)}
+                className="px-2 py-2 text-xs text-zinc-500"
+              >
+                Cancel
+              </button>
+            </form>
+          )}
         </div>
         <button
           onClick={copyLink}
@@ -485,7 +558,7 @@ export default function PollPageClient({
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
           </svg>
-          Copy link
+          {linkCopied ? 'Copied!' : 'Copy link'}
         </button>
       </div>
 
@@ -718,17 +791,28 @@ export default function PollPageClient({
       )}
 
       {!isScheduled && responses.length > 0 && !editing && (
-        <div className="flex items-center justify-end">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
-            onClick={() => setHeatmapFilter(f => f === 'all' ? '80plus' : 'all')}
+            onClick={() => setHeatmapFilter(f => (f === 'everyone' ? 'all' : 'everyone'))}
+            className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-colors touch-manipulation min-h-[44px] border ${
+              heatmapFilter === 'everyone'
+                ? 'bg-teal-950/60 border-teal-700 text-teal-300'
+                : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            {heatmapFilter === 'everyone' ? 'Showing everyone free' : 'Everyone free'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setHeatmapFilter(f => (f === '80plus' ? 'all' : '80plus'))}
             className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-colors touch-manipulation min-h-[44px] border ${
               heatmapFilter === '80plus'
                 ? 'bg-teal-950/60 border-teal-700 text-teal-300'
                 : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300'
             }`}
           >
-            {heatmapFilter === '80plus' ? 'Showing 80%+ free' : 'Highlight 80%+ free'}
+            {heatmapFilter === '80plus' ? 'Showing mostly free' : 'Mostly free'}
           </button>
         </div>
       )}
@@ -743,7 +827,9 @@ export default function PollPageClient({
           onToggle={handleToggle}
           tapMode={tapMode}
           onCellInspect={!editing && responses.length > 0 ? setInspectedSlot : undefined}
-          highlightThreshold={heatmapFilter === '80plus' ? 0.8 : null}
+          highlightThreshold={
+            heatmapFilter === 'everyone' ? 1 : heatmapFilter === '80plus' ? 0.8 : null
+          }
         />
         {!editing && !isScheduled && (
           <p className="text-center text-xs text-zinc-600 mt-3">
@@ -941,21 +1027,42 @@ export default function PollPageClient({
               </div>
 
               <div>
-                <p className="text-xs font-medium text-zinc-500 mb-1.5">
-                  Not free ({inspectedBreakdown.notFree.length})
+                <p className="text-xs font-medium text-amber-400/90 mb-1.5">
+                  Busy ({inspectedBreakdown.busy.length})
                 </p>
-                {inspectedBreakdown.notFree.length > 0 ? (
+                {inspectedBreakdown.busy.length > 0 ? (
                   <ul className="space-y-1">
-                    {inspectedBreakdown.notFree.map(n => (
+                    {inspectedBreakdown.busy.map(n => (
                       <li key={n} className={`text-sm ${isSelfName(n) ? 'text-indigo-300/80 font-medium' : 'text-zinc-400'}`}>
                         {n}{isSelfName(n) ? ' (you)' : ''}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-zinc-600">Everyone who responded is free</p>
+                  <p className="text-sm text-zinc-600">No one marked busy for this time</p>
                 )}
               </div>
+
+              <div>
+                <p className="text-xs font-medium text-zinc-500 mb-1.5">
+                  No mark for this time ({inspectedBreakdown.noMark.length})
+                </p>
+                {inspectedBreakdown.noMark.length > 0 ? (
+                  <ul className="space-y-1">
+                    {inspectedBreakdown.noMark.map(n => (
+                      <li key={n} className={`text-sm ${isSelfName(n) ? 'text-indigo-300/80 font-medium' : 'text-zinc-500'}`}>
+                        {n}{isSelfName(n) ? ' (you)' : ''}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-zinc-600">Everyone who responded picked free or busy</p>
+                )}
+              </div>
+
+              <p className="text-xs text-zinc-600 pt-1">
+                Friends who haven&apos;t opened the link yet won&apos;t appear here.
+              </p>
 
               {responses.length === 0 && (
                 <p className="text-sm text-zinc-600">No responses yet</p>

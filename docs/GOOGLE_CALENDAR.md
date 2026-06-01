@@ -1,6 +1,6 @@
 # Google Calendar integration — status & testing
 
-Last updated: May 2026. Source of truth for OAuth implementation and deferred QA.
+Last updated: June 1, 2026. Source of truth for OAuth implementation and deferred QA.
 
 See also: [README.md](./README.md) (env vars, GCP setup), [PRODUCT.md](./PRODUCT.md) §11 (product intent).
 
@@ -14,6 +14,8 @@ Update manually in [Linear](https://linear.app/hangout-friends) (or `node script
 |-------|------------------|-------|
 | **HGT-34** | **Done** / In Review | OAuth + token storage + Profile connect/disconnect shipped on `main`. Localhost verified. Production smoke test deferred. |
 | **HGT-29** | **Done** (verify UI) | OAuth + `listBusyTimes` shipped; confirm plan grid pre-fill in UI before re-implementing. |
+| **HGT-132** | In Review | `freebusy.query` uses all calendars from `calendarList.list` (not primary-only). |
+| **HGT-133** | Done | Free vs busy: `freebusy.query` excludes “Show as: Free” events by design — see section below. |
 | **HGT-30** | **Done** | ICS export — `/api/polls/[id]/ics` (cloud agent, merged to `main`). |
 
 ---
@@ -57,6 +59,12 @@ Update manually in [Linear](https://linear.app/hangout-friends) (or `node script
 - [x] Connect flow end-to-end
 - [x] Profile shows Connected
 - [x] Tokens in Supabase
+
+### Free vs busy (Google Calendar “Show as”)
+
+Hangout uses Google Calendar **`freebusy.query`**, which only returns intervals where the user is **busy**. Events marked **Free** in Google Calendar are excluded automatically — they do not block availability pre-fill. Events marked **Busy** (or default busy) block the corresponding slots.
+
+**Verify:** Create one event as Free → slot stays open in Hangout; change to Busy → slot blocks.
 
 ### Not implemented / deferred
 

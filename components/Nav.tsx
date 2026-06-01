@@ -8,6 +8,7 @@ import { isPlanRespondPage } from '@/lib/planRoutes'
 const links = [
   { href: '/pods', label: 'Pods' },
   { href: '/polls/new', label: 'New Plan' },
+  { href: '/#your-plans', label: 'My plans' },
   { href: '/bugs', label: 'Report' },
 ]
 

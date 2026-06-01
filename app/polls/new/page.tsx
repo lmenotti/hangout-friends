@@ -1,20 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
 
-function buildMonthDays(year: number, month: number) {
-  const firstDay = new Date(year, month, 1).getDay()
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  return { firstDay, daysInMonth }
-}
-
-function toISO(year: number, month: number, day: number) {
-  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-}
-
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const ROLLING_WEEKS = 2
+
+function toISO(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function startOfWeekSunday(d: Date): Date {
+  const start = new Date(d)
+  start.setHours(12, 0, 0, 0)
+  start.setDate(start.getDate() - start.getDay())
+  return start
+}
 
 function nextSevenDays(): Set<string> {
   const dates = new Set<string>()
@@ -22,9 +24,26 @@ function nextSevenDays(): Set<string> {
   for (let i = 0; i < 7; i++) {
     const d = new Date(today)
     d.setDate(today.getDate() + i)
-    dates.add(d.toISOString().slice(0, 10))
+    dates.add(toISO(d))
   }
   return dates
+}
+
+function buildRollingDays(viewStart: Date, weeks: number) {
+  const days: { iso: string; dayNum: number; monthShort: string; isPast: boolean }[] = []
+  const todayIso = toISO(new Date())
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = new Date(viewStart)
+    d.setDate(viewStart.getDate() + i)
+    const iso = toISO(d)
+    days.push({
+      iso,
+      dayNum: d.getDate(),
+      monthShort: d.toLocaleDateString('en-US', { month: 'short' }),
+      isPast: iso < todayIso,
+    })
+  }
+  return days
 }
 
 export default function NewPollPage() {
@@ -35,18 +54,25 @@ export default function NewPollPage() {
   const [selectedDates, setSelectedDates] = useState<Set<string>>(nextSevenDays)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [viewStart, setViewStart] = useState(() => startOfWeekSunday(new Date()))
 
-  // Prefill the creator name for signed-in users.
   useEffect(() => {
     if (user?.name) setCreatorName(user.name)
   }, [user?.name])
 
-  const today = new Date()
-  const [viewYear, setViewYear] = useState(today.getFullYear())
-  const [viewMonth, setViewMonth] = useState(today.getMonth())
+  const rollingDays = useMemo(
+    () => buildRollingDays(viewStart, ROLLING_WEEKS),
+    [viewStart],
+  )
 
-  const { firstDay, daysInMonth } = buildMonthDays(viewYear, viewMonth)
-  const monthLabel = new Date(viewYear, viewMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const rangeLabel = useMemo(() => {
+    const first = rollingDays[0]
+    const last = rollingDays[rollingDays.length - 1]
+    if (!first || !last) return ''
+    const fmt = (iso: string) =>
+      new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return `${fmt(first.iso)} – ${fmt(last.iso)}`
+  }, [rollingDays])
 
   const toggleDate = (iso: string) => {
     setSelectedDates(prev => {
@@ -56,14 +82,20 @@ export default function NewPollPage() {
     })
   }
 
-  const prevMonth = () => {
-    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
-    else setViewMonth(m => m - 1)
+  const prevWeek = () => {
+    setViewStart(prev => {
+      const next = new Date(prev)
+      next.setDate(prev.getDate() - 7)
+      return next
+    })
   }
 
-  const nextMonth = () => {
-    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
-    else setViewMonth(m => m + 1)
+  const nextWeek = () => {
+    setViewStart(prev => {
+      const next = new Date(prev)
+      next.setDate(prev.getDate() + 7)
+      return next
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,8 +122,8 @@ export default function NewPollPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       router.push(`/p/${data.slug}?fill=1`)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not create the plan.')
       setSubmitting(false)
     }
   }
@@ -130,43 +162,37 @@ export default function NewPollPage() {
           </label>
 
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-            {/* Month nav */}
             <div className="flex items-center justify-between mb-3">
-              <button type="button" onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 transition-colors">
+              <button type="button" onClick={prevWeek} className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
                   <path d="M15 18l-6-6 6-6" />
                 </svg>
               </button>
-              <span className="text-sm font-medium text-zinc-200">{monthLabel}</span>
-              <button type="button" onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 transition-colors">
+              <span className="text-sm font-medium text-zinc-200 text-center">{rangeLabel}</span>
+              <button type="button" onClick={nextWeek} className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
                   <path d="M9 18l6-6-6-6" />
                 </svg>
               </button>
             </div>
 
-            {/* Weekday headers */}
             <div className="grid grid-cols-7 mb-1">
               {WEEKDAYS.map(d => (
                 <div key={d} className="text-center text-[11px] text-zinc-600 font-medium py-1">{d}</div>
               ))}
             </div>
 
-            {/* Day grid */}
             <div className="grid grid-cols-7 gap-px">
-              {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} />)}
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const day = i + 1
-                const iso = toISO(viewYear, viewMonth, day)
+              {rollingDays.map(({ iso, dayNum, monthShort, isPast }) => {
                 const selected = selectedDates.has(iso)
-                const isPast = new Date(iso) < new Date(today.toDateString())
+                const showMonth = dayNum === 1 || iso === rollingDays[0]?.iso
                 return (
                   <button
-                    key={day}
+                    key={iso}
                     type="button"
                     disabled={isPast}
                     onClick={() => toggleDate(iso)}
-                    className={`aspect-square rounded-lg text-sm font-medium transition-colors touch-manipulation ${
+                    className={`aspect-square rounded-lg text-sm font-medium transition-colors touch-manipulation flex flex-col items-center justify-center gap-0 ${
                       selected
                         ? 'bg-indigo-600 text-white'
                         : isPast
@@ -174,7 +200,10 @@ export default function NewPollPage() {
                         : 'text-zinc-300 hover:bg-zinc-800'
                     }`}
                   >
-                    {day}
+                    {showMonth && (
+                      <span className="text-[9px] font-normal opacity-80 leading-none">{monthShort}</span>
+                    )}
+                    <span>{dayNum}</span>
                   </button>
                 )
               })}
@@ -198,7 +227,7 @@ export default function NewPollPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-medium py-3 rounded-xl transition-colors touch-manipulation"
+          className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-medium py-3 rounded-xl transition-colors touch-manipulation min-h-[48px]"
         >
           {submitting ? 'Creating…' : 'Get link'}
         </button>

@@ -8,7 +8,7 @@ import { isPlanRespondPage } from '@/lib/planRoutes'
 const mainTabs = [
   {
     href: '/',
-    label: 'Home',
+    label: 'Plans',
     icon: (active: boolean) => (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.25 : 1.75} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
         <path d="M3 12L12 3l9 9" />

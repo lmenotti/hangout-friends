@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
 
 type MinPoll = {
@@ -63,7 +64,7 @@ function YourPlans({ token }: { token: string | null }) {
   useEffect(() => {
     const headers: Record<string, string> = {}
     if (token) headers['x-user-token'] = token
-    fetch('/api/polls/mine', { headers })
+    fetch('/api/polls/mine', { headers, credentials: 'same-origin' })
       .then(r => (r.ok ? r.json() : null))
       .then(setPlans)
       .catch(() => {})
@@ -138,9 +139,43 @@ function Dashboard() {
 }
 
 function Landing() {
+  const router = useRouter()
+  const [redirecting, setRedirecting] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (sessionStorage.getItem('hangout_home_stay') === '1') return
+
+    const goToPlan = (slug: string) => {
+      setRedirecting(true)
+      router.replace(`/p/${slug}`)
+    }
+
+    Promise.all([
+      fetch('/api/polls/mine', { credentials: 'same-origin' }).then(r => (r.ok ? r.json() : null)),
+      fetch('/api/polls/last', { credentials: 'same-origin' }).then(r => (r.ok ? r.json() : null)),
+    ])
+      .then(([mine, last]: [{ created: MinPoll[]; on_device: MinPoll[] } | null, { slug: string | null } | null]) => {
+        if (!mine && !last?.slug) return
+        const all = mine ? [...mine.created, ...mine.on_device] : []
+        if (all.length === 1) {
+          goToPlan(all[0].slug)
+          return
+        }
+        if (last?.slug) {
+          goToPlan(last.slug)
+        }
+      })
+      .catch(() => {})
+  }, [router])
+
+  if (redirecting) {
+    return <div className="h-40 rounded-xl bg-zinc-800/50 animate-pulse mt-4" />
+  }
+
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center text-center px-4 py-16 space-y-12">
-      <div className="space-y-4 max-w-lg">
+    <div className="min-h-[80vh] flex flex-col items-center px-4 py-16 space-y-10 max-w-lg mx-auto w-full">
+      <div className="space-y-4 text-center w-full">
         <h1 className="text-5xl font-bold text-zinc-100 tracking-tight">hangout</h1>
         <p className="text-lg text-zinc-400 leading-relaxed">
           Drop a link in iMessage. Everyone marks when they&apos;re free — no account, no app download.
@@ -154,7 +189,19 @@ function Landing() {
         Create a plan
       </Link>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg text-left">
+      <div id="your-plans" className="w-full space-y-3 text-left">
+        <h2 className="text-sm font-medium text-zinc-400">My plans on this device</h2>
+        <YourPlans token={null} />
+        <button
+          type="button"
+          onClick={() => sessionStorage.setItem('hangout_home_stay', '1')}
+          className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+        >
+          Stay on home instead of auto-opening my plan
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full text-left">
         {[
           { emoji: '🔗', title: 'Share a link', desc: 'One URL in group chat. Everyone responds anonymously.' },
           { emoji: '🗓️', title: 'Mark availability', desc: 'Tap or drag on a mobile-friendly grid.' },

@@ -20,6 +20,10 @@ export default function PushNotificationPrompt() {
   const [busy, setBusy] = useState(false)
 
   const refresh = useCallback(async () => {
+    if (pathname === '/polls/new') {
+      setVisible(false)
+      return
+    }
     if (!VAPID_PUBLIC_KEY || !pushSupported()) {
       setVisible(false)
       return
@@ -86,7 +90,7 @@ export default function PushNotificationPrompt() {
 
   return (
     <div
-      className="fixed inset-x-0 z-50 px-4 pointer-events-none bottom-[calc(7rem+env(safe-area-inset-bottom))] md:bottom-20"
+      className="fixed inset-x-0 z-50 px-4 pointer-events-none top-[calc(3.5rem+env(safe-area-inset-top))] md:top-4"
       role="region"
       aria-label="Enable notifications"
     >

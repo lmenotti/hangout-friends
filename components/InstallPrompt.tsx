@@ -56,6 +56,10 @@ export default function InstallPrompt() {
   const [visible, setVisible] = useState(false)
 
   const refresh = useCallback(() => {
+    if (pathname === '/polls/new') {
+      setVisible(false)
+      return
+    }
     if (isInstalledPwa()) {
       setVisible(false)
       return
@@ -95,7 +99,7 @@ export default function InstallPrompt() {
 
   return (
     <div
-      className="fixed inset-x-0 z-50 px-4 pointer-events-none bottom-[calc(3.5rem+env(safe-area-inset-bottom))] md:bottom-4"
+      className="fixed inset-x-0 z-50 px-4 pointer-events-none top-[calc(3.5rem+env(safe-area-inset-top))] md:top-4"
       role="region"
       aria-label="Install Hangout"
     >

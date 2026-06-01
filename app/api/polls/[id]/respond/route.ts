@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { appendLastPlanSlugCookie } from '@/lib/lastPlan'
 import { appendPlanIdentityCookie, normalizePlanIdentityName } from '@/lib/planIdentity'
 import { notifyPlanCreatorOfResponse } from '@/lib/pushNotifications'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
+
+async function attachPlanCookies(res: NextResponse, pollId: string, name: string) {
+  appendPlanIdentityCookie(res, pollId, name)
+  const { data: poll } = await supabase.from('polls').select('slug').eq('id', pollId).single()
+  if (poll?.slug) appendLastPlanSlugCookie(res, poll.slug)
+}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -28,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     const res = NextResponse.json(data)
-    appendPlanIdentityCookie(res, id, name)
+    await attachPlanCookies(res, id, name)
     return res
   }
 
@@ -40,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   const res = NextResponse.json(data)
-  appendPlanIdentityCookie(res, id, name)
+  await attachPlanCookies(res, id, name)
   void notifyPlanCreatorOfResponse(id, name)
   return res
 }

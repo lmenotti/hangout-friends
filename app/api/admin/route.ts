@@ -1,19 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { checkAdminPin, isAdminPinConfigured } from '@/lib/adminPin'
+import { requireAdminPin } from '@/lib/requireAdminPin'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
-
-function requireAdminPin(req: NextRequest): NextResponse | null {
-  if (!isAdminPinConfigured()) {
-    return NextResponse.json(
-      { error: 'Admin PIN is not configured on this server.' },
-      { status: 503 },
-    )
-  }
-  if (!checkAdminPin(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  return null
-}
 
 export async function GET(req: NextRequest) {
   const authError = requireAdminPin(req)

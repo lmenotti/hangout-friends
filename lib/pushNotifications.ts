@@ -1,6 +1,6 @@
 import webpush from 'web-push'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
-import { formatScheduledLabel } from '@/lib/pollSchedule'
+import { formatScheduledLabel } from '@/lib/formatScheduledLabel'
 
 /**
  * VAPID keys (Web Push):

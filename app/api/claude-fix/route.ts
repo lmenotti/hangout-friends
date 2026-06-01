@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { checkAdminPin, isAdminPinConfigured } from '@/lib/adminPin'
+import { requireAdminPin } from '@/lib/requireAdminPin'
 
 export async function POST(req: NextRequest) {
-  if (!isAdminPinConfigured()) {
-    return NextResponse.json(
-      { error: 'Admin PIN is not configured on this server.' },
-      { status: 503 },
-    )
-  }
-  if (!checkAdminPin(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authError = requireAdminPin(req)
+  if (authError) return authError
 
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
