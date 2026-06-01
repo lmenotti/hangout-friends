@@ -7,6 +7,7 @@ export type DisplayNameSource =
   | 'derived'
   | 'email_local'
   | 'google'
+  | 'manual'
 
 export type ResolvedDisplayName = {
   name: string
@@ -74,6 +75,16 @@ export function emailLocalPartDisplayName(email: string): string {
   const local = email.split('@')[0]?.toLowerCase().trim() ?? ''
   if (!local) return 'user'
   return local.slice(0, DISPLAY_NAME_MAX_LENGTH)
+}
+
+/** Normalize a user-edited display name (first token, max length). */
+export function normalizeManualDisplayName(raw: string | null | undefined): string | null {
+  if (raw == null) return null
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  const first = trimmed.split(/\s+/)[0] ?? ''
+  if (!first) return null
+  return first.slice(0, DISPLAY_NAME_MAX_LENGTH)
 }
 
 /** Normalize Google profile given name for storage (first token, lowercase). */

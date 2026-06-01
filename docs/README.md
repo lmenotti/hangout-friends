@@ -87,7 +87,7 @@ Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo
   - **Alternatives** (`/auth/signin/options`): password (HGT-94), passkey / WebAuthn (HGT-95), Google SSO (HGT-96), Apple Sign In (HGT-97)
   - UI shell: HGT-92 — tabs, options page, Autofill-friendly inputs (`autocomplete`, `inputMode`, ≥16px font)
   - Session: `gs_token` cookie (`context/UserContext.tsx`) after any successful method
-  - Display name resolution (`lib/displayName.ts`, `users.name_source`): plan cookie → email local part → Google profile `given_name`
+  - Display name resolution (`lib/displayName.ts`, `users.name_source`): plan cookie → email local part → Google profile `given_name`; signed-in users can edit name on `/profile` (PATCH `/api/users`, `name_source: manual`, HGT-128)
   - `/auth/signup` redirects to sign-in; new accounts created on first successful sign-in
 - **Sacred:** anonymous `/p/*` respond never requires phone, email, or any account
 
@@ -170,7 +170,7 @@ npx web-push generate-vapid-keys
 
 ### Google Calendar OAuth
 
-OAuth routes and `/api/calendar/sync` are implemented in `lib/googleCalendar.ts`. Connect/disconnect on `/profile`. Preview deploys omit Google credentials (policy below). Deferred QA: **[docs/GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md)**.
+OAuth routes and `/api/calendar/sync` are implemented in `lib/googleCalendar.ts`. Connect/disconnect on `/profile` (also home location and display name). Preview deploys omit Google credentials (policy below). Deferred QA: **[docs/GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md)**.
 
 | Item | Value |
 |------|--------|

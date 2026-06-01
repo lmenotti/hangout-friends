@@ -19,7 +19,11 @@ const CALENDAR_MESSAGES: Record<string, { text: string; tone: 'ok' | 'err' }> = 
 export default function ProfilePage() {
   const { user, token, updateUser, clearUser } = useUser()
   const router = useRouter()
+  const [displayName, setDisplayName] = useState(user?.name ?? '')
   const [homeLocation, setHomeLocation] = useState(user?.home_location ?? '')
+  const [editingName, setEditingName] = useState(false)
+  const [savingName, setSavingName] = useState(false)
+  const [nameError, setNameError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -44,6 +48,14 @@ export default function ProfilePage() {
     router.replace('/profile')
   }, [token, updateUser, router])
 
+  useEffect(() => {
+    if (user?.name) setDisplayName(user.name)
+  }, [user?.name])
+
+  useEffect(() => {
+    setHomeLocation(user?.home_location ?? '')
+  }, [user?.home_location])
+
   if (!user) {
     return (
       <main className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 px-4 pb-24">
@@ -56,6 +68,28 @@ export default function ProfilePage() {
         </Link>
       </main>
     )
+  }
+
+  const handleSaveName = async () => {
+    if (!token) return
+    setSavingName(true)
+    setNameError('')
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-user-token': token },
+        body: JSON.stringify({ name: displayName }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      updateUser(data)
+      setDisplayName(data.name)
+      setEditingName(false)
+    } catch (err: unknown) {
+      setNameError(err instanceof Error ? err.message : 'Could not save name')
+    } finally {
+      setSavingName(false)
+    }
   }
 
   const handleSaveLocation = async () => {
@@ -123,16 +157,49 @@ export default function ProfilePage() {
         </div>
 
         {/* Name */}
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 space-y-1">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Name</p>
-          <p className="text-base font-medium text-zinc-100">{user.name}</p>
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Name</p>
+            <button
+              type="button"
+              onClick={() => {
+                if (editingName) {
+                  void handleSaveName()
+                } else {
+                  setDisplayName(user.name)
+                  setNameError('')
+                  setEditingName(true)
+                }
+              }}
+              disabled={editingName && (savingName || !displayName.trim())}
+              className="shrink-0 text-sm font-medium text-indigo-400 hover:text-indigo-300 disabled:opacity-40 transition-colors touch-manipulation"
+            >
+              {savingName ? 'Saving…' : editingName ? 'Save name' : 'Edit name'}
+            </button>
+          </div>
+          {editingName ? (
+            <>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                autoComplete="nickname"
+                maxLength={40}
+                autoFocus
+                placeholder="Your first name"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              />
+              {nameError && <p className="text-xs text-red-400">{nameError}</p>}
+            </>
+          ) : (
+            <p className="text-base font-medium text-zinc-100">{user.name}</p>
+          )}
           {user.email && (
             <>
-              <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 pt-2">Email</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 pt-1">Email</p>
               <p className="text-sm text-zinc-300">{user.email}</p>
             </>
           )}
-          <p className="text-xs text-zinc-600 pt-1">Name can&apos;t be changed here. Ask an admin.</p>
         </div>
 
         {/* Home location */}

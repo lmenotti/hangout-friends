@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { normalizeManualDisplayName } from '@/lib/displayName'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 
 function sanitizeUserResponse(
@@ -15,14 +16,31 @@ export async function PATCH(req: NextRequest) {
   const token = req.headers.get('x-user-token')
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { home_location } = await req.json()
-  const trimmedHome = home_location?.trim() || null
+  const body = await req.json()
+  const updates: Record<string, string | null> = {}
+
+  if ('home_location' in body) {
+    updates.home_location = typeof body.home_location === 'string' ? body.home_location.trim() || null : null
+  }
+
+  if ('name' in body) {
+    const normalized = normalizeManualDisplayName(body.name)
+    if (!normalized) {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    }
+    updates.name = normalized
+    updates.name_source = 'manual'
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+  }
 
   const { data, error } = await supabase
     .from('users')
-    .update({ home_location: trimmedHome })
+    .update(updates)
     .eq('token', token)
-    .select('id, name, token, created_at, home_location, google_refresh_token')
+    .select('id, name, token, created_at, home_location, email, google_refresh_token')
     .single()
 
   if (error || !data) return NextResponse.json({ error: error?.message ?? 'Not found' }, { status: 500 })
