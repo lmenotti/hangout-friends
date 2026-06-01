@@ -10,9 +10,10 @@ Hangout is a link-first group scheduling app for college friend groups. Live at 
 Before doing any non-trivial work, read these in order:
 1. `docs/GOALS.md` — strategy, why we're building this, kill criteria
 2. `docs/PRODUCT.md` — what the app *should* be (v1 blueprint, design principles, what's explicitly out of scope)
-3. `docs/README.md` — current implementation overview and active priorities
-4. `docs/AGENT_WORK.md` — if doing MVP follow-up (Sprint 4 QA or Wave 4 code); contains agent prompts
-5. `docs/GOOGLE_CALENDAR.md` — if touching Calendar OAuth, pre-fill (HGT-29/34), or deferred QA
+3. `docs/PERFORMANCE.md` — **speed is a product feature**; sacred-path rules, agent checklist, optimization workflow
+4. `docs/README.md` — current implementation overview and active priorities
+5. `docs/AGENT_WORK.md` — if doing MVP follow-up (Sprint 4 QA or Wave 4 code); contains agent prompts
+6. `docs/GOOGLE_CALENDAR.md` — if touching Calendar OAuth, pre-fill (HGT-29/34), or deferred QA
 
 Do **not** use `docs/archive/` for current behavior — those files are historical (Nov 2025 audits, completed wave plan).
 
@@ -29,6 +30,8 @@ If a request conflicts with PRODUCT.md, flag the conflict before proceeding. Don
 ## Working principles
 
 **The anonymous link flow is sacred.** The single most important user path is: stranger taps a plan link in iMessage → marks availability in mobile Safari → leaves. No account. No download. No friction. Any change that adds steps, login walls, or required fields to this flow needs explicit justification against PRODUCT.md before being made.
+
+**Speed is part of that flow — not a later polish pass.** The plan page must load fast on mobile 4G (<1s target per PRODUCT.md). Do not add global scripts, extra client fetches before first paint, or heavy app chrome to `/p/[slug]`. Read `docs/PERFORMANCE.md` before touching plan routes, root layout, or poll APIs. If a feature would make the sacred path slower, flag it and propose a faster alternative.
 
 **Don't drift into a calendar app.** Hangout coordinates plans. It does not store users' lives. Plans expire 30 days after their date by default. Calendar sync is read-only and one-way. Resist the urge to add "calendar app" features even when they seem helpful.
 
@@ -80,6 +83,7 @@ See `docs/README.md` (environment variables). Don't commit `.env.local` or any f
 - For UI changes, describe how it looks on mobile (5.5" viewport) specifically, not just desktop
 - Don't add new npm dependencies without explaining why an existing one doesn't suffice
 - Prefer editing existing files over creating new ones; flag when a new file is genuinely needed
+- **Performance:** run the agent checklist in `docs/PERFORMANCE.md` for any PR; sacred-path files (`app/p/`, `PollPageClient`, `PollGrid`, poll API routes, `app/layout.tsx`) require explicit perf consideration — no new inefficiencies by default
 
 ## When uncertain
 

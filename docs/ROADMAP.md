@@ -6,6 +6,9 @@ Personal planning doc. Not a commitment, just a living reference.
 
 ## Near-term (next few sessions)
 
+### Account sign-in (HGT-91 — v1 MVP)
+Expand `/auth/signin` beyond email magic link. **Primary:** email + phone (SMS OTP). **Alternatives** on `/auth/signin/options`: password, passkey, Google SSO, Apple Sign In. All inputs Autofill-friendly. Linear: HGT-92–HGT-97 under HGT-91. Product: [PRODUCT.md](./PRODUCT.md) §9.
+
 ### Mobile UX
 The app works on mobile but has rough edges. Priority improvements:
 - **Bottom navigation bar** — current top nav is cramped on small screens; a fixed bottom tab bar is the standard mobile pattern

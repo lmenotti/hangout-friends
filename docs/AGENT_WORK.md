@@ -1,6 +1,6 @@
 # Agent work — MVP status & prompts
 
-**Last updated:** May 29, 2026  
+**Last updated:** May 31, 2026  
 **Linear:** [hangout-friends](https://linear.app/hangout-friends)
 
 This is the single doc for **what to build next** and **copy-paste agent prompts**. Strategy and blueprint live in [GOALS.md](./GOALS.md) and [PRODUCT.md](./PRODUCT.md). Implementation details and env vars live in [README.md](./README.md).
@@ -14,8 +14,35 @@ This is the single doc for **what to build next** and **copy-paste agent prompts
 | **Waves 0–3** (MVP code) | **Done** — link shell, plan loop, OG, PWA, cookies, expiration, calendar OAuth, push, ICS |
 | **Sprint 4** (human validation) | **Not started** — see checklist below |
 | **Wave 4** (optional code) | **Done** — top-3 scheduler, magic link auth (HGT-11/13), calendar pre-fill |
+| **Multi-method auth (v1)** | **Active** — HGT-91 (email + phone primary; password, passkey, Google, Apple alternatives) |
 
 Do not re-run archived Wave 0–3 agent prompts ([archive/mvp-agent/](./archive/mvp-agent/)).
+
+---
+
+## Active — multi-method account sign-in (HGT-91)
+
+**Product scope change (May 2026):** Optional account sign-in expands from email magic link only to multiple methods. See [PRODUCT.md](./PRODUCT.md) §9. Plan link respond flow stays sacred.
+
+| Linear | Title | Status | Notes |
+|--------|-------|--------|-------|
+| **HGT-91** | Multi-method account sign-in (v1 MVP) | **Todo** | Parent; High priority |
+| **HGT-92** | Sign-in UI: primary + options page | Todo | Do first — Autofill attributes, email/phone tabs |
+| **HGT-93** | Phone number (SMS OTP) | Todo | Co-primary with email |
+| **HGT-94** | Password sign-in | Todo | `/auth/signin/options` |
+| **HGT-95** | Passkey / WebAuthn | Todo | Biometric + security keys |
+| **HGT-96** | Google SSO | Todo | Separate from Calendar OAuth (HGT-29/34) |
+| **HGT-97** | Apple Sign In | Todo | Requires Apple Developer Services ID |
+
+**Suggested order:** HGT-92 (UI) → HGT-93 (phone) + HGT-94 (password) in parallel → HGT-96/HGT-97 (SSO) → HGT-95 (passkey).
+
+**Coordination rules**
+
+1. One migration number per agent if schema changes.
+2. All methods issue the same `gs_token` session (`context/UserContext.tsx`).
+3. Use HTML `autocomplete` / `inputMode` on every auth input (see HGT-92).
+4. **Done when:** `npm run build` passes; `/p/*` respond still works with first name only.
+5. Do not require account, phone, or email on plan respond path.
 
 ---
 

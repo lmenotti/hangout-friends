@@ -1,7 +1,7 @@
 # Hangout — Product Blueprint (v1)
 
 > Companion document to GOALS.md. This is *what we're building right now*, not what Hangout will be forever. Re-evaluate after each milestone in GOALS.md.
-> Last updated: [DATE]
+> Last updated: May 2026
 
 ---
 
@@ -13,10 +13,11 @@ Hangout is a link-first group scheduling tool. The atomic unit is a *plan*: a si
 
 1. **The link is the product.** A first-time user must be able to respond to a Hangout plan from mobile Safari without creating an account, downloading anything, or completing more than one screen of input. If a feature degrades this, the feature doesn't ship.
 2. **Anonymous is a first-class citizen.** Plans must be fully usable by people who only ever enter their first name. Account holders get extras, but nothing core requires login.
-3. **No surveillance vibes.** No phone number requirements. No mandatory contact upload. No "invite 3 friends to unlock the app." No social feed showing what your friends are up to. No engagement-bait notifications.
+3. **No surveillance vibes.** Phone and email are never required to respond to a plan link — only a first name. Optional account sign-in may use phone or email, but that is separate from the anonymous respond flow. No mandatory contact upload. No "invite 3 friends to unlock the app." No social feed showing what your friends are up to. No engagement-bait notifications.
 4. **Plans are ephemeral by default.** A plan disappears 30 days after its scheduled date unless an account holder pins it. We are not a calendar; we are a coordination tool.
 5. **Mobile-first, then desktop.** Every screen gets designed for a 5.5" iPhone before it gets designed for anything else. Desktop is responsive scaling, not a separate experience.
 6. **Boring tech, sharp UX.** No novel architectures. No experimental features. The differentiation is in the polish of the basic flows.
+7. **Fast is a feature.** Hangout should feel like the lightweight option — instant plan links, no bloat. The plan landing page loads in <1s on 4G; marking availability completes in <30s. Latency on `/p/[slug]` is not deferrable tech debt. See [PERFORMANCE.md](./PERFORMANCE.md) for workflow and agent rules.
 
 ---
 
@@ -98,10 +99,16 @@ A pod can create a plan that uses pod-member availability automatically, but the
 - Add-to-home-screen prompt (gentle, not a wall) after a user has interacted with 2+ plans.
 - Once installed, push notifications become available. Notifications are ONLY for: someone responded to a plan you created, your plan got auto-scheduled, an event you RSVP'd yes to is happening tomorrow. No social feed, no "your friend updated their availability" noise.
 
-### 9. Account creation (optional, gentle)
-- Triggered by: user wants to create a pod, user wants their plans to persist past 30 days, user wants calendar sync.
-- Sign-up flow is email + password OR magic link. No phone number, no contact upload, no friend invitation requirement.
+### 9. Account sign-in (optional, multi-method)
+- Triggered by: user wants to create a pod, user wants their plans to persist past 30 days, user wants calendar sync, or user wants returning access across devices.
+- **Shipped today:** unified **email magic link** at `/auth/signin` (HGT-13) — one email field, account auto-created on first link; display name from plan cookie or email (`lib/displayName.ts`). `/auth/signup` redirects to sign-in; `/auth/signin/options` is a stub for future methods.
+- **Planned (HGT-91 — not all built yet):** see bullets below. For what is live in code, prefer [README.md](./README.md) § Auth.
+- **Primary sign-in** (promoted on `/auth/signin`): **email magic link** and **phone number** (SMS OTP) — equal prominence, passwordless, mobile-first.
+- **Alternative sign-in** (`/auth/signin/options`): password (email + password), passkey / WebAuthn (biometric, security keys), Google SSO, Apple Sign In. More options reduce friction for returning users; none are required.
+- All auth inputs must use correct HTML `autocomplete`, `inputMode`, and `type` so iOS/Android offer Autofill (saved email, phone, passwords, passkeys, one-time codes).
+- No contact upload, no friend invitation requirement. Plan respond flow never requires an account.
 - Existing anonymous responses in plans automatically migrate to the new account if claimed via cookie.
+- Linear: parent **HGT-91** with sub-issues HGT-92–HGT-97.
 
 ### 10. Pods (basic version)
 - Create a pod, name it, invite members by sharing a pod link.
@@ -138,7 +145,7 @@ A pod can create a plan that uses pod-member availability automatically, but the
 | Payment / subscription tier | Not until we know what someone would pay for. |
 | Two-way calendar write-back | Privacy risk. People don't want random apps adding events to their calendars. ICS export on demand is enough. |
 | Apple / Outlook calendar integration | Google covers most of our demographic. Add others when users actually ask. |
-| Apple / Google sign-in | Adds friction without clear benefit. Email + password is fine for the small fraction of users who'll bother creating accounts. |
+| ~~Apple / Google sign-in~~ | **Moved into v1** — see §9 alternative sign-in (HGT-96, HGT-97). Still optional; never required for plan links. |
 | Reminders, alarms, notifications beyond the three core types | Notification overload is a documented problem in this category. We send 3 kinds of notifications, ever. |
 | Public / discoverable plans | Spam vector, moderation nightmare, not our use case. |
 | Friend connections, follower system | We're not a social network. |
@@ -151,7 +158,7 @@ A pod can create a plan that uses pod-member availability automatically, but the
 - **Frontend:** Next.js 16 + Tailwind v4. Already in place.
 - **Backend:** Next.js API routes. Already in place.
 - **Database:** Supabase Postgres with RLS. Already in place.
-- **Auth:** Custom token system for anonymous, optional email+password for accounts. Migrate to Supabase Auth post-v1 if it gets messy.
+- **Auth:** Custom token system (`gs_token` cookie) for accounts. Anonymous plan identity via per-plan httpOnly cookie. Account sign-in: email magic link + phone (primary), plus password, passkey, Google SSO, and Apple Sign In (alternatives). Calendar OAuth is separate from identity SSO. Migrate to Supabase Auth only if custom multi-method auth becomes unmaintainable.
 - **Hosting:** Vercel. Already in place.
 - **PWA:** Next.js PWA plugin, Workbox for service worker, manifest.json with proper iOS icons.
 - **Push notifications:** Web Push API. iOS Safari supports it as of 16.4. Test thoroughly on actual iPhones.
@@ -170,11 +177,12 @@ This is a suggested sequence. Each step should be considered "done" only when it
 3. **Mobile-first availability grid.** Polish the existing grid into something that feels great on a phone. Big tap targets. Drag-select. Save on every interaction.
 4. **PWA polish.** Manifest, icons, install prompt. Test add-to-home-screen on iOS and Android.
 5. **The three-notification system.** Push notifications only for the three events listed above. Build it once, build it right.
-6. **Pod creation flow.** For users who want to plan repeatedly with the same group.
-7. **Read-only Google Calendar sync.** Pre-fills availability. One-way only.
-8. **ICS export.** "Add this scheduled plan to my calendar" — one-shot, no integration required.
-9. **Admin polish.** Use the existing admin panel; clean up anything that's broken.
-10. **Stop and re-evaluate.** After all of the above is real and used, return to GOALS.md and decide what's next.
+6. **Multi-method account sign-in.** Primary: email magic link + phone. Alternatives: password, passkey, Google, Apple. See HGT-91.
+7. **Pod creation flow.** For users who want to plan repeatedly with the same group.
+8. **Read-only Google Calendar sync.** Pre-fills availability. One-way only.
+9. **ICS export.** "Add this scheduled plan to my calendar" — one-shot, no integration required.
+10. **Admin polish.** Use the existing admin panel; clean up anything that's broken.
+11. **Stop and re-evaluate.** After all of the above is real and used, return to GOALS.md and decide what's next.
 
 ---
 
@@ -188,6 +196,7 @@ You can call v1 done when all of these are true:
 - One non-founder friend group has used Hangout to plan at least 3 hangouts unprompted.
 - One Berkeley club is committed to using it for the semester.
 - Calendar sync works for Google for account holders.
+- Account sign-in supports at least email magic link, phone, and two alternative methods (password, passkey, Google, or Apple) with Autofill-friendly inputs.
 - Auto-schedule produces sensible results in 90%+ of cases on real plans.
 
 You do not need: a polished pod system, multiple calendar integrations, native apps, monetization, or 1000 users. Those are v2 problems.

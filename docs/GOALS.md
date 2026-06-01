@@ -46,6 +46,8 @@ This is the Partiful playbook: remove the "download an app and sign up" friction
 
 **Critical:** v1 must nail the link-to-respond flow on mobile Safari. If a non-account user can't go from "tap link" to "marked my availability" in under 30 seconds with zero confusion, nothing else matters. *[TODO: usability test with 5 people who have never seen the app.]*
 
+**Speed is part of that wedge.** We aim to be the fast option in group scheduling (lightweight link, instant grid — not a bloated social calendar). Performance on `/p/[slug]` is a product requirement, not post-launch polish. Workflow and agent rules: [PERFORMANCE.md](./PERFORMANCE.md).
+
 ## How we'll build it
 
 Already on Next.js + Supabase + Vercel + Claude Code. Stack is fine for the scale we'll realistically hit.

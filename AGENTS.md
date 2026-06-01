@@ -4,6 +4,12 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+## Performance (read before coding)
+
+**Speed is a core product requirement**, not optional polish. Before changes to `/p/[slug]`, poll APIs, root layout, or the availability grid, read **`docs/PERFORMANCE.md`** — sacred-path checklist, anti-patterns, and optimization workflow. Do not introduce global scripts, client-side data waterfalls, or unindexed hot-path queries on the anonymous plan link flow.
+
+See `CLAUDE.md` for the full doc read order.
+
 ## Cursor Cloud specific instructions
 
 ### Quick reference
