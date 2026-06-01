@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useUser } from '@/context/UserContext'
 import { isPlanRespondPage } from '@/lib/planRoutes'
 
-const tabs = [
+const mainTabs = [
   {
     href: '/',
     label: 'Home',
@@ -38,22 +39,40 @@ const tabs = [
       </svg>
     ),
   },
-  {
-    href: '/profile',
-    label: 'Profile',
-    icon: (active: boolean) => (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.25 : 1.75} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-      </svg>
-    ),
-  },
 ]
+
+const profileTab = {
+  href: '/profile',
+  label: 'Profile',
+  icon: (active: boolean) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.25 : 1.75} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+    </svg>
+  ),
+}
+
+const signInTab = {
+  href: '/auth/signin',
+  label: 'Sign in',
+  icon: (active: boolean) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.25 : 1.75} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+      <polyline points="10 17 15 12 10 7" />
+      <line x1="15" y1="12" x2="3" y2="12" />
+    </svg>
+  ),
+}
 
 export default function BottomNav() {
   const pathname = usePathname()
+  const { user, loading } = useUser()
 
   if (pathname === '/admin' || isPlanRespondPage(pathname)) return null
+
+  // While auth is resolving keep showing Profile to avoid a tab label flash.
+  const lastTab = loading || user ? profileTab : signInTab
+  const tabs = [...mainTabs, lastTab]
 
   return (
     <nav

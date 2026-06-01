@@ -1,12 +1,106 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useUser } from '@/context/UserContext'
 
-function Dashboard() {
-  const { user } = useUser()
+type MinPoll = {
+  id: string
+  slug: string
+  title: string
+  status: string
+  date_options: string[]
+  creator_name: string
+  created_at: string
+  scheduled_at: string | null
+}
+
+function formatDateRange(dates: string[]): string {
+  if (!dates.length) return ''
+  const sorted = [...dates].sort()
+  const fmt = (d: string) =>
+    new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return sorted.length === 1
+    ? fmt(sorted[0])
+    : `${fmt(sorted[0])} – ${fmt(sorted[sorted.length - 1])}`
+}
+
+function PlanCard({ plan }: { plan: MinPoll }) {
   return (
-    <div className="space-y-10">
+    <Link
+      href={`/p/${plan.slug}`}
+      className="flex items-center justify-between p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-colors group"
+    >
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium text-zinc-100 group-hover:text-white transition-colors truncate">
+            {plan.title}
+          </span>
+          {plan.status === 'scheduled' && (
+            <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300">
+              Scheduled
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-zinc-500 mt-0.5">{formatDateRange(plan.date_options)}</p>
+      </div>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 shrink-0 ml-3 transition-colors"
+      >
+        <path d="M9 18l6-6-6-6" />
+      </svg>
+    </Link>
+  )
+}
+
+function YourPlans({ token }: { token: string | null }) {
+  const [plans, setPlans] = useState<{ created: MinPoll[]; on_device: MinPoll[] } | null>(null)
+
+  useEffect(() => {
+    const headers: Record<string, string> = {}
+    if (token) headers['x-user-token'] = token
+    fetch('/api/polls/mine', { headers })
+      .then(r => (r.ok ? r.json() : null))
+      .then(setPlans)
+      .catch(() => {})
+  }, [token])
+
+  if (!plans) {
+    return <div className="h-20 rounded-xl bg-zinc-800/50 animate-pulse" />
+  }
+
+  const all = [...plans.created, ...plans.on_device]
+  if (all.length === 0) {
+    return (
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center space-y-3">
+        <p className="text-zinc-500 text-sm">No plans yet.</p>
+        <Link
+          href="/polls/new"
+          className="inline-block text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+        >
+          Create your first plan →
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {all.map(plan => (
+        <PlanCard key={plan.id} plan={plan} />
+      ))}
+    </div>
+  )
+}
+
+function Dashboard() {
+  const { user, token } = useUser()
+  return (
+    <div className="space-y-8">
       <div>
         <p className="text-zinc-500 text-sm mb-0.5">Welcome back</p>
         <h1 className="text-2xl font-semibold text-zinc-100">{user?.name}</h1>
@@ -33,6 +127,11 @@ function Dashboard() {
           </div>
           <span className="text-zinc-600 group-hover:text-zinc-400 transition-colors">→</span>
         </Link>
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-zinc-400">Your plans</h2>
+        <YourPlans token={token} />
       </div>
     </div>
   )

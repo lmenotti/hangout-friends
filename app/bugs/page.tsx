@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useUser } from '@/context/UserContext'
 
 export default function BugsPage() {
@@ -13,10 +14,14 @@ export default function BugsPage() {
 
   if (!user) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center text-center">
-        <div className="space-y-2">
-          <p className="text-zinc-400 text-sm">Sign in to submit a bug report.</p>
-        </div>
+      <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+        <p className="text-zinc-400 text-sm">Sign in to submit a bug report.</p>
+        <Link
+          href="/auth/signin?returnTo=/bugs"
+          className="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+        >
+          Sign in
+        </Link>
       </div>
     )
   }
