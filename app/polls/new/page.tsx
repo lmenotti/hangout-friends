@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useUser } from '@/context/UserContext'
 
@@ -16,6 +16,24 @@ function startOfWeekSunday(d: Date): Date {
   start.setHours(12, 0, 0, 0)
   start.setDate(start.getDate() - start.getDay())
   return start
+}
+
+function buildRollingDays(start: Date, weeks: number) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const days: { iso: string; dayNum: number; monthShort: string; isPast: boolean }[] = []
+  const startSunday = startOfWeekSunday(start)
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = new Date(startSunday)
+    d.setDate(startSunday.getDate() + i)
+    days.push({
+      iso: toISO(d),
+      dayNum: d.getDate(),
+      monthShort: d.toLocaleDateString('en-US', { month: 'short' }),
+      isPast: d < today,
+    })
+  }
+  return days
 }
 
 function nextSevenDays(): Set<string> {
@@ -123,6 +141,7 @@ export default function NewPollPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [createdSlug, setCreatedSlug] = useState<string | null>(null)
+  const [viewStart, setViewStart] = useState(() => startOfWeekSunday(new Date()))
 
   useEffect(() => {
     if (user?.name) setCreatorName(user.name)

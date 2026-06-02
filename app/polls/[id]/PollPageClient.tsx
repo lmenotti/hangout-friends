@@ -93,7 +93,6 @@ export default function PollPageClient({
   const [rsvpSubmitting, setRsvpSubmitting] = useState(false)
   const [inspectedSlot, setInspectedSlot] = useState<string | null>(null)
   const [heatmapFilter, setHeatmapFilter] = useState<'all' | '80plus' | 'everyone'>('all')
-  const [linkCopied, setLinkCopied] = useState(false)
   const [editingCreatorName, setEditingCreatorName] = useState(false)
   const [creatorNameDraft, setCreatorNameDraft] = useState('')
   const [creatorNameSaving, setCreatorNameSaving] = useState(false)
@@ -188,6 +187,13 @@ export default function PollPageClient({
   // after a calendar change (webhook-invalidated cache) picks up fresh data.
   useEffect(() => {
     if (!editing) calendarFetchedRef.current = false
+  }, [editing])
+
+  // Body scroll lock on mobile during edit — mirrors AvailabilityGrid.
+  useEffect(() => {
+    const isMobile = window.matchMedia('(max-width: 767px)').matches
+    document.body.style.overflow = editing && isMobile ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
   }, [editing])
 
   // When editing starts for a signed-in user, fetch their Google Calendar busy times and
@@ -417,14 +423,9 @@ export default function PollPageClient({
 
   const [copied, setCopied] = useState(false)
   const copyLink = () => {
-   
-    void navigator.clipboard.writeText(window.location.href)
+    navigator.clipboard.writeText(window.location.href)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
- .then(() => {
-      setLinkCopied(true)
-      window.setTimeout(() => setLinkCopied(false), 2000)
-    })
   }
 
   const saveCreatorName = async (e: React.FormEvent) => {
@@ -510,6 +511,93 @@ export default function PollPageClient({
   if (!poll) return <p className="text-zinc-500">Poll not found.</p>
 
   return (
+    <>
+      {/* Fullscreen edit overlay — mobile only */}
+      {editing && !isScheduled && (
+        <div
+          className="md:hidden fixed inset-0 z-50 flex flex-col bg-zinc-950 select-none"
+          style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          <div className="flex items-center justify-between px-4 shrink-0 border-b border-zinc-800" style={{ height: '56px' }}>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-medium text-zinc-300 truncate">
+                Marking as <span className="text-zinc-100">{name}</span>
+              </span>
+              {saveStatusLabel && (
+                <span className={`text-xs font-medium shrink-0 ${
+                  saveStatus === 'saved' ? 'text-teal-400' : saveStatus === 'error' ? 'text-red-400' : 'text-zinc-500'
+                }`}>
+                  {saveStatusLabel}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setEditing(false)}
+              className="px-4 py-1.5 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors touch-manipulation"
+            >
+              Done
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between px-4 py-3 shrink-0">
+            <p className="text-xs text-zinc-500">
+              {tapMode ? 'Tap cells to toggle.' : 'Drag to mark when you\'re free.'}
+            </p>
+            <div className="flex rounded-lg overflow-hidden border border-zinc-700 text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => { setTapMode(false); localStorage.setItem('poll_tap_mode', '0') }}
+                className={`px-3 py-2.5 min-h-[44px] transition-colors touch-manipulation ${!tapMode ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500'}`}
+              >
+                Drag
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTapMode(true); localStorage.setItem('poll_tap_mode', '1') }}
+                className={`px-3 py-2.5 min-h-[44px] transition-colors touch-manipulation ${tapMode ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500'}`}
+              >
+                Tap
+              </button>
+            </div>
+          </div>
+
+          {(calendarBaseline !== null || calendarFetching) && (
+            <div className="flex items-center justify-between gap-3 px-4 pb-3 shrink-0">
+              <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-3.5 h-3.5 shrink-0">
+                  <rect x="3" y="4" width="18" height="18" rx="2" />
+                  <path d="M16 2v4M8 2v4M3 10h18" />
+                </svg>
+                {calendarFetching ? 'Loading from Google Calendar…' : 'Pre-filled from Google Calendar'}
+              </span>
+              {calendarBaseline !== null && (
+                <button
+                  type="button"
+                  onClick={() => setMySlots(new Set(calendarBaseline))}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors touch-manipulation px-2 py-2.5 min-h-[44px] shrink-0"
+                >
+                  Revert to calendar
+                </button>
+              )}
+            </div>
+          )}
+
+          <div className="flex-1 min-h-0 overflow-auto px-4 pb-4">
+            <PollGrid
+              dates={poll.date_options}
+              mySlots={mySlots}
+              aggregate={aggregate}
+              totalResponders={responses.length}
+              editing={true}
+              onToggle={handleToggle}
+              tapMode={tapMode}
+              onCellInspect={undefined}
+              highlightThreshold={null}
+            />
+          </div>
+        </div>
+      )}
+
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
@@ -1077,5 +1165,6 @@ export default function PollPageClient({
         </div>
       )}
     </div>
+    </>
   )
 }
