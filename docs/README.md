@@ -41,6 +41,8 @@ The atomic unit is a **plan**: a shareable URL anyone can respond to without cre
 
 **Wave 4** (optional code before or after Sprint 4): top-3 scheduler (HGT-22). Magic link auth (HGT-11/13) shipped. ICS (HGT-30) is done.
 
+**Active (Jun 2026):** **iOS PWA tester feedback** filed as HGT-138–147 (nav chrome, grid rewrite, live updates, create-flow perf, push UX, etc.). Re-file script: `node scripts/linear-ios-pwa-feedback-jun2026.mjs` (needs `LINEAR_API_KEY` in `.env.local`).
+
 **Active (May 2026):** **HGT-91** multi-method account sign-in — email + phone primary; password, passkey, Google SSO, Apple on `/auth/signin/options`. See [AGENT_WORK.md](./AGENT_WORK.md).
 
 **Shipped (Waves 0–3 + follow-ups):**
@@ -57,7 +59,7 @@ The atomic unit is a **plan**: a shareable URL anyone can respond to without cre
 | Push | HGT-28 | migration 023, service worker, 3 allowlisted types; `PushNotificationPrompt` + `/api/push/watches` (httpOnly plan cookie reads for `plan_watches`) |
 | Perf (phase 1) | HGT-84/88/110/112 | migration 027 (`poll_responses`, `idea_votes` indexes); filtered `idea_votes` in auto-schedule; client-safe `lib/formatScheduledLabel.ts`; removed unused `date-fns`/`rrule` |
 | Perf (phase 2) | HGT-83/87 | `/p/[slug]` SSR passes `initialData` to `PollPageClient` via `lib/planPageData.ts`; `getPollBySlug` wrapped in `cache()` for metadata dedupe. Measure: `node scripts/measure-plan-page.mjs <slug> <poll-id>` |
-| QoL batch (Jun 2026) | HGT-49/51/59/104/115/117/80/136 | Copy-link feedback; install/push prompts top-aligned (hidden on `/polls/new`); rolling 4-week create calendar (HGT-136, was 2-week in HGT-80); heatmap “everyone free” + 3-bucket slot inspect; creator name typo fix (`PATCH /api/polls/[id]/creator-name`); return-to-plan (`hangout_last_plan` cookie + `/api/polls/last` + home redirect); admin PIN fail-closed + rate limit (`lib/requireAdminPin.ts`) |
+| QoL batch (Jun 2026) | HGT-49/51/59/80/104/115/117/136 | Copy-link (HGT-59); return-to-plan (HGT-51); rolling 4-week create calendar (HGT-136); heatmap filter + slot inspect (HGT-117); admin PIN guard (HGT-104); post-create share (HGT-115); creator rename API (HGT-49) |
 
 Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo but are off nav. Orphaned global components removed. Pods exist but are frozen for MVP validation.
 
