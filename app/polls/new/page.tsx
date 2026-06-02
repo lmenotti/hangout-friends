@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useUser } from '@/context/UserContext'
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
@@ -29,32 +29,100 @@ function nextSevenDays(): Set<string> {
   return dates
 }
 
-function buildRollingDays(viewStart: Date, weeks: number) {
-  const days: { iso: string; dayNum: number; monthShort: string; isPast: boolean }[] = []
-  const todayIso = toISO(new Date())
-  for (let i = 0; i < weeks * 7; i++) {
-    const d = new Date(viewStart)
-    d.setDate(viewStart.getDate() + i)
-    const iso = toISO(d)
-    days.push({
-      iso,
-      dayNum: d.getDate(),
-      monthShort: d.toLocaleDateString('en-US', { month: 'short' }),
-      isPast: iso < todayIso,
-    })
+function ShareScreen({ slug, planTitle }: { slug: string; planTitle: string }) {
+  const [copied, setCopied] = useState(false)
+  const planUrl = typeof window !== 'undefined' ? `${window.location.origin}/p/${slug}` : `/p/${slug}`
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(planUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
-  return days
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: planTitle, url: planUrl })
+      } catch {
+        // user cancelled or share failed — fall through silently
+      }
+    } else {
+      handleCopy()
+    }
+  }
+
+  const canShare = typeof navigator !== 'undefined' && !!navigator.share
+
+  return (
+    <div className="max-w-sm space-y-8 py-4">
+      <div className="space-y-1">
+        <p className="text-xs font-medium uppercase tracking-widest text-indigo-400">Plan created</p>
+        <h1 className="text-2xl font-semibold text-zinc-100">{planTitle}</h1>
+        <p className="text-sm text-zinc-500">Share this link with your group — no account needed to respond.</p>
+      </div>
+
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 font-mono text-sm text-zinc-400 truncate">
+        {planUrl}
+      </div>
+
+      <div className="space-y-3">
+        {canShare && (
+          <button
+            onClick={handleShare}
+            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition-colors touch-manipulation"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-4 h-4">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+            Share
+          </button>
+        )}
+        <button
+          onClick={handleCopy}
+          className={`w-full flex items-center justify-center gap-2 font-medium py-3 rounded-xl border transition-colors touch-manipulation ${
+            copied
+              ? 'bg-teal-950/40 border-teal-800/60 text-teal-300'
+              : canShare
+              ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+              : 'bg-indigo-600 hover:bg-indigo-500 border-transparent text-white'
+          }`}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-4 h-4">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+          {copied ? 'Copied!' : 'Copy link'}
+        </button>
+      </div>
+
+      <div className="pt-2 border-t border-zinc-800 space-y-2">
+        <Link
+          href={`/p/${slug}?fill=1`}
+          className="w-full flex items-center justify-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 py-2 transition-colors"
+        >
+          Mark my availability →
+        </Link>
+        <Link
+          href="/"
+          className="w-full flex items-center justify-center gap-2 text-sm text-zinc-600 hover:text-zinc-400 py-2 transition-colors"
+        >
+          Go to dashboard
+        </Link>
+      </div>
+    </div>
+  )
 }
 
 export default function NewPollPage() {
-  const router = useRouter()
   const { user, token } = useUser()
   const [title, setTitle] = useState('')
   const [creatorName, setCreatorName] = useState('')
   const [selectedDates, setSelectedDates] = useState<Set<string>>(nextSevenDays)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [viewStart, setViewStart] = useState(() => startOfWeekSunday(new Date()))
+  const [createdSlug, setCreatedSlug] = useState<string | null>(null)
 
   useEffect(() => {
     if (user?.name) setCreatorName(user.name)
@@ -121,11 +189,15 @@ export default function NewPollPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      router.push(`/p/${data.slug}?fill=1`)
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Could not create the plan.')
+      setCreatedSlug(data.slug)
+    } catch (err: any) {
+      setError(err.message)
       setSubmitting(false)
     }
+  }
+
+  if (createdSlug) {
+    return <ShareScreen slug={createdSlug} planTitle={title} />
   }
 
   return (

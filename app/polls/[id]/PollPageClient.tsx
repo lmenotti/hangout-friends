@@ -415,8 +415,13 @@ export default function PollPageClient({
       return { label, count }
     })
 
+  const [copied, setCopied] = useState(false)
   const copyLink = () => {
-    void navigator.clipboard.writeText(window.location.href).then(() => {
+   
+    void navigator.clipboard.writeText(window.location.href)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+ .then(() => {
       setLinkCopied(true)
       window.setTimeout(() => setLinkCopied(false), 2000)
     })
@@ -558,7 +563,7 @@ export default function PollPageClient({
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
           </svg>
-          {linkCopied ? 'Copied!' : 'Copy link'}
+          {copied ? 'Copied!' : 'Copy link'}
         </button>
       </div>
 
