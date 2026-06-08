@@ -6,8 +6,12 @@ Personal planning doc. Not a commitment, just a living reference.
 
 ## Near-term (next few sessions)
 
-### Account sign-in (HGT-91 — v1 MVP)
-Expand `/auth/signin` beyond email magic link. **Primary:** email + phone (SMS OTP). **Alternatives** on `/auth/signin/options`: password, passkey, Google SSO, Apple Sign In. All inputs Autofill-friendly. Linear: HGT-92–HGT-97 under HGT-91. Product: [PRODUCT.md](./PRODUCT.md) §9.
+### Data protection (HGT-150 — backlog)
+
+Encrypt Google refresh tokens; hash session + magic-link tokens; purge expired auth rows; optional hard-delete after plan archive. **Not** encrypting plan titles or respondent first names (visible to link holders by design). See [PRIVACY.md](./PRIVACY.md). File/sync: `node scripts/linear-privacy-data-jun2026.mjs`.
+
+### Account sign-in (HGT-91 — v1)
+**Magic link first** — polish HGT-148; lazy prompts HGT-149. SMS (HGT-93) only as step-up/recovery if built. Passkeys (HGT-95) medium-term. HGT-92–94, HGT-96–97 tagged *Deprioritized* / *Might be removed* in Linear. Product: [PRODUCT.md](./PRODUCT.md) §9. Sync: `node scripts/linear-auth-strategy-jun2026.mjs`.
 
 ### Mobile UX
 The app works on mobile but has rough edges. Priority improvements:

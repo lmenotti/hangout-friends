@@ -1,6 +1,6 @@
 # Agent work — MVP status & prompts
 
-**Last updated:** May 31, 2026  
+**Last updated:** June 1, 2026  
 **Linear:** [hangout-friends](https://linear.app/hangout-friends)
 
 This is the single doc for **what to build next** and **copy-paste agent prompts**. Strategy and blueprint live in [GOALS.md](./GOALS.md) and [PRODUCT.md](./PRODUCT.md). Implementation details and env vars live in [README.md](./README.md).
@@ -14,35 +14,41 @@ This is the single doc for **what to build next** and **copy-paste agent prompts
 | **Waves 0–3** (MVP code) | **Done** — link shell, plan loop, OG, PWA, cookies, expiration, calendar OAuth, push, ICS |
 | **Sprint 4** (human validation) | **Not started** — see checklist below |
 | **Wave 4** (optional code) | **Done** — top-3 scheduler, magic link auth (HGT-11/13), calendar pre-fill |
-| **Multi-method auth (v1)** | **Active** — HGT-91 (email + phone primary; password, passkey, Google, Apple alternatives) |
+| **Account sign-in (v1)** | **Active** — HGT-91 magic link first; HGT-148 polish, HGT-149 lazy prompts; HGT-92–97 deprioritized in Linear |
+| **Data protection** | **Backlog** — [PRIVACY.md](./PRIVACY.md); **HGT-150** (encrypt OAuth secrets, hash tokens, retention) |
 
 Do not re-run archived Wave 0–3 agent prompts ([archive/mvp-agent/](./archive/mvp-agent/)).
 
 ---
 
-## Active — multi-method account sign-in (HGT-91)
+## Active — account sign-in (HGT-91)
 
-**Product scope change (May 2026):** Optional account sign-in expands from email magic link only to multiple methods. See [PRODUCT.md](./PRODUCT.md) §9. Plan link respond flow stays sacred.
+**Strategy (Jun 2026):** Research review + GOALS wedge → **one** primary sign-in (email magic link), lazy account prompts, step-up SMS only for high-risk actions later. May 2026 “multi-method” plan is **not** the v1 path. See [PRODUCT.md](./PRODUCT.md) §9. Sacred `/p/*` flow unchanged.
+
+**Linear sync:** `node scripts/linear-auth-strategy-jun2026.mjs` (tags *Deprioritized* / *Might be removed* on HGT-92–97 without deleting issues).
 
 | Linear | Title | Status | Notes |
 |--------|-------|--------|-------|
-| **HGT-91** | Multi-method account sign-in (v1 MVP) | **Todo** | Parent; High priority |
-| **HGT-92** | Sign-in UI: primary + options page | Todo | Do first — Autofill attributes, email/phone tabs |
-| **HGT-93** | Phone number (SMS OTP) | Todo | Co-primary with email |
-| **HGT-94** | Password sign-in | Todo | `/auth/signin/options` |
-| **HGT-95** | Passkey / WebAuthn | Todo | Biometric + security keys |
-| **HGT-96** | Google SSO | Todo | Separate from Calendar OAuth (HGT-29/34) |
-| **HGT-97** | Apple Sign In | Todo | Requires Apple Developer Services ID |
+| **HGT-91** | Account sign-in strategy (v1) — magic link first | Todo | Parent |
+| **HGT-148** | Polish email magic-link sign-in UX | Todo | **Do first** — near-term v1 |
+| **HGT-149** | Lazy account prompts at success moments | Backlog | After M1 validation OK |
+| **HGT-92** | Sign-in UI: primary + options page | Backlog | **Deprioritized** — do not build phone tabs |
+| **HGT-93** | Phone number (SMS OTP) | Backlog | **Deprioritized** — re-scope: step-up/recovery only |
+| **HGT-94** | Password sign-in | Backlog | **Might be removed** |
+| **HGT-95** | Passkey / WebAuthn | Backlog | **Deprioritized** — medium-term |
+| **HGT-96** | Google SSO | Backlog | **Might be removed** (Calendar OAuth ≠ this) |
+| **HGT-97** | Apple Sign In | Backlog | **Might be removed** |
 
-**Suggested order:** HGT-92 (UI) → HGT-93 (phone) + HGT-94 (password) in parallel → HGT-96/HGT-97 (SSO) → HGT-95 (passkey).
+**Suggested order:** HGT-148 (magic link polish) → HGT-149 (lazy prompts) → M1/Sprint 4 before HGT-93/95. Do **not** prioritize HGT-92/94/96/97 unless product direction changes.
 
 **Coordination rules**
 
 1. One migration number per agent if schema changes.
-2. All methods issue the same `gs_token` session (`context/UserContext.tsx`).
-3. Use HTML `autocomplete` / `inputMode` on every auth input (see HGT-92).
+2. Session remains `gs_token` (`context/UserContext.tsx`).
+3. Use HTML `autocomplete` / `inputMode` on auth inputs (HGT-148).
 4. **Done when:** `npm run build` passes; `/p/*` respond still works with first name only.
 5. Do not require account, phone, or email on plan respond path.
+6. Do not add co-primary SMS or password to `/auth/signin` without explicit PRODUCT.md change.
 
 ---
 

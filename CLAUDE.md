@@ -14,6 +14,7 @@ Before doing any non-trivial work, read these in order:
 4. `docs/README.md` — current implementation overview and active priorities
 5. `docs/AGENT_WORK.md` — if doing MVP follow-up (Sprint 4 QA or Wave 4 code); contains agent prompts
 6. `docs/GOOGLE_CALENDAR.md` — if touching Calendar OAuth, pre-fill (HGT-29/34), or deferred QA
+7. `docs/PRIVACY.md` — if storing new PII/secrets, auth tokens, or changing retention/RLS
 
 Do **not** use `docs/archive/` for current behavior — those files are historical (Nov 2025 audits, completed wave plan).
 

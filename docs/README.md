@@ -16,6 +16,7 @@ Live at [hangout-friends.vercel.app](https://hangout-friends.vercel.app)
 | **This file** | Current codebase, env vars, deployment, **active priorities** |
 | [AGENT_WORK.md](./AGENT_WORK.md) | Sprint 4 QA checklist + Wave 4 agent prompts |
 | [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md) | Calendar OAuth + deferred QA |
+| [PRIVACY.md](./PRIVACY.md) | Data inventory, encryption vs anonymization, retention — **read before storing new PII** |
 | [ROADMAP.md](./ROADMAP.md) | Post-MVP ideas (not commitments) |
 | [archive/](./archive/) | Historical audits and May 2026 wave plan — **not authoritative** |
 
@@ -43,7 +44,7 @@ The atomic unit is a **plan**: a shareable URL anyone can respond to without cre
 
 **Active (Jun 2026):** **iOS PWA tester feedback** filed as HGT-138–147 (nav chrome, grid rewrite, live updates, create-flow perf, push UX, etc.). Re-file script: `node scripts/linear-ios-pwa-feedback-jun2026.mjs` (needs `LINEAR_API_KEY` in `.env.local`).
 
-**Active (May 2026):** **HGT-91** multi-method account sign-in — email + phone primary; password, passkey, Google SSO, Apple on `/auth/signin/options`. See [AGENT_WORK.md](./AGENT_WORK.md).
+**Active (Jun 2026):** **HGT-91** account sign-in strategy — magic link first ([HGT-148](https://linear.app/hangout-friends/issue/HGT-148) polish), lazy prompts ([HGT-149](https://linear.app/hangout-friends/issue/HGT-149)). Legacy multi-method tickets HGT-92–97 tagged *Deprioritized* / *Might be removed* in Linear (not deleted). Sync: `node scripts/linear-auth-strategy-jun2026.mjs`. See [AGENT_WORK.md](./AGENT_WORK.md).
 
 **Shipped (Waves 0–3 + follow-ups):**
 
@@ -85,13 +86,15 @@ Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo
 
 ### Auth
 - **Plans:** per-plan httpOnly cookie + first name (`lib/planIdentity.ts`) — no account required
-- **Accounts (v1 — in progress, HGT-91):**
-  - **Primary** (`/auth/signin`): email magic link (shipped, HGT-13) + phone SMS OTP (HGT-93) — equal prominence
-  - **Alternatives** (`/auth/signin/options`): password (HGT-94), passkey / WebAuthn (HGT-95), Google SSO (HGT-96), Apple Sign In (HGT-97)
-  - UI shell: HGT-92 — tabs, options page, Autofill-friendly inputs (`autocomplete`, `inputMode`, ≥16px font)
-  - Session: `gs_token` cookie (`context/UserContext.tsx`) after any successful method
+- **Accounts (v1 — HGT-91):**
+  - **Primary** (`/auth/signin`): email magic link only (shipped, HGT-13); polish in **HGT-148**
+  - **Lazy prompts:** contextual account nudges at success moments (**HGT-149**) — not upfront walls
+  - **Step-up (later, HGT-93 — deprioritized):** SMS OTP for recovery + high-risk actions only, not routine login
+  - **Medium-term (HGT-95 — deprioritized):** passkeys for power users
+  - **Likely out of v1:** password (HGT-94), Google/Apple identity SSO (HGT-96/97), email+phone tabs (HGT-92) — Linear labels *Might be removed* / *Deprioritized*
+  - Session: `gs_token` cookie (`context/UserContext.tsx`)
   - Display name resolution (`lib/displayName.ts`, `users.name_source`): plan cookie → email local part → Google profile `given_name`; signed-in users can edit name on `/profile` (PATCH `/api/users`, `name_source: manual`, HGT-128)
-  - `/auth/signup` redirects to sign-in; new accounts created on first successful sign-in
+  - `/auth/signup` redirects to sign-in; `/auth/signin/options` stub points to magic link
 - **Sacred:** anonymous `/p/*` respond never requires phone, email, or any account
 
 ### Admin
@@ -143,11 +146,11 @@ NEXT_PUBLIC_VAPID_PUBLIC_KEY=your_vapid_public_key  # same public key for browse
 CRON_SECRET=your_cron_secret                        # secures /api/cron/* (Vercel Cron sends Bearer token)
 RESEND_API_KEY=re_xxxxxxxx                          # required in Production — magic link emails (from resend.com/api-keys)
 RESEND_FROM="Hangout <auth@mail.tryhangout.com>"    # optional; this is the default if omitted
-# Phone sign-in (HGT-93) — add when implementing SMS OTP, e.g. Twilio:
+# SMS step-up / recovery (HGT-93, deprioritized) — e.g. Twilio Verify:
 # TWILIO_ACCOUNT_SID=...
 # TWILIO_AUTH_TOKEN=...
-# TWILIO_VERIFY_SERVICE_SID=...   # or SMS send number
-# Apple Sign In (HGT-97) — add when implementing:
+# TWILIO_VERIFY_SERVICE_SID=...
+# Apple Sign In (HGT-97, might be removed) — add only if revived:
 # APPLE_CLIENT_ID=...
 # APPLE_TEAM_ID=...
 
@@ -222,6 +225,8 @@ Applied migrations are tracked in a `_migrations` table. New files are picked up
 `_migrations` has RLS enabled with no policies, which locks it to deny-all for every PostgREST client role. The migration runner connects via a direct Postgres connection (service role), so it bypasses RLS and is unaffected.
 
 **Migration `026_tighten_rls_users_and_remaining.sql` (HGT-109):** Drops anon `SELECT` on `users` (session tokens, email, Google OAuth fields were exposed via PostgREST). Drops remaining permissive mutation policies on polls, poll_responses, pods, pod_members, bug_reports, and `events` update — extending the `020` pattern. Enables RLS on `google_calendar_channels` with no policies (deny-all for anon; API uses service role). Public reads on plan/poll/pod/availability tables are unchanged for the link-first flow.
+
+**Privacy / operator access:** Seeing plaintext rows in the Supabase dashboard is **project-operator access** (bypasses RLS), not what strangers get from the anon key. We still hash/encrypt **secrets** (session tokens, OAuth refresh tokens) and hard-delete expired plan data where policy requires — see **[PRIVACY.md](./PRIVACY.md)** and **HGT-150**.
 
 **API auth (HGT-108, low-disruption):** Legacy global list endpoints require a valid `x-user-token` and scope results to the caller: `GET /api/events` and `GET /api/ideas` return only rows with `pod_id` null or in the user’s pods; `GET /api/availability` without `pod_id` returns only the authenticated user’s slots, and with `pod_id` requires pod membership. Plan schedule is already gated via `creator_token` on `POST /api/polls/[id]/schedule` (`lib/planCreator.ts`). `GET /api/events/[id]` is unchanged (anonymous event detail).
 
@@ -317,20 +322,22 @@ Synced with [Linear](https://linear.app/hangout-friends). Full agent/QA breakdow
 
 Dev verification: `npm run verify:021` · `npm run test:plan-loop` · `npm run build`
 
-### Active — multi-method auth (HGT-91, v1 MVP)
+### Active — account sign-in (HGT-91, v1)
 
-Parent: **[HGT-91](https://linear.app/hangout-friends/issue/HGT-91/multi-method-account-sign-in-v1-mvp)** — implement soon; stub at `/auth/signin/options`.
+Parent: **[HGT-91](https://linear.app/hangout-friends/issue/HGT-91)** — magic link first (research-aligned, Jun 2026). Re-sync Linear: `node scripts/linear-auth-strategy-jun2026.mjs`.
 
-| Issue | Method |
-|-------|--------|
-| **HGT-92** | UI: primary email + phone tabs; alternatives page; Autofill attributes |
-| **HGT-93** | Phone number (SMS OTP) — co-primary with email |
-| **HGT-94** | Password (email + password) |
-| **HGT-95** | Passkey / WebAuthn (biometric, YubiKey) |
-| **HGT-96** | Google SSO (identity OAuth — separate from Calendar) |
-| **HGT-97** | Apple Sign In |
+| Issue | Scope | Linear label |
+|-------|--------|----------------|
+| **HGT-148** | Polish magic link UX (copy, errors, deliverability, Autofill) | — |
+| **HGT-149** | Lazy account prompts at Pod / calendar success moments | — |
+| **HGT-92** | Was: email+phone tabs UI | Deprioritized |
+| **HGT-93** | Re-scoped: SMS step-up / recovery only | Deprioritized |
+| **HGT-94** | Password sign-in | Might be removed |
+| **HGT-95** | Passkey / WebAuthn | Deprioritized |
+| **HGT-96** | Google identity SSO | Might be removed |
+| **HGT-97** | Apple Sign In | Might be removed |
 
-Supersedes canceled post-v1 tickets HGT-78 (password) and HGT-79 (Google). See [PRODUCT.md](./PRODUCT.md) §9.
+HGT-78/79 remain **Canceled**; HGT-94/96 reopened under HGT-91 are deprioritized again. See [PRODUCT.md](./PRODUCT.md) §9.
 
 ### Sprint 4 — human validation (not started)
 
@@ -341,7 +348,7 @@ Supersedes canceled post-v1 tickets HGT-78 (password) and HGT-79 (Google). See [
 
 ### Wave 4 — shipped (PR #8, May 29)
 
-- **HGT-11/13** — Magic link at `/auth/signin` (migration `024`); extended by **HGT-91** multi-method auth
+- **HGT-11/13** — Magic link at `/auth/signin` (migration `024`); **HGT-91** strategy + **HGT-148** polish
 - **HGT-22** — Top-3 auto-schedule: preview `POST /schedule` → confirm with `slot_key` + `idea_id`
 - **HGT-29** — Calendar busy pre-fill on plan grid (verify UI vs [GOOGLE_CALENDAR.md](./GOOGLE_CALENDAR.md))
 
