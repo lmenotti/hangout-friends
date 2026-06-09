@@ -124,15 +124,14 @@ These came from the May 2026 audit and represent the kind of mistakes that accum
 
 See [docs/README.md](./README.md) § Performance & Optimization for the full issue list (HGT-82–HGT-90).
 
-**Shipped (May 2026 — see README shipped table):** HGT-83 (SSR `initialData` on `/p/[slug]`), HGT-84/88/110/112 (indexes, trim deps, auto-schedule query scope), HGT-87 (dedupe slug lookup via `cache()`).
+**Shipped (May 2026 — see README shipped table):** HGT-83 (SSR `initialData` on `/p/[slug]`), HGT-84/88/110/112 (indexes, trim deps, auto-schedule query scope), HGT-87 (dedupe slug lookup via `cache()`), **HGT-82** (Maps JS removed from root layout; dynamic load in `PlacesInput` only).
 
 **Still open / next:**
 
-1. **HGT-82** — Remove global Google Maps JS from root layout (load only where `PlacesInput` is used)
-2. **HGT-85** — Lazy-load ideas board below the fold
-3. **HGT-86** — Lightweight layout for `/p/*` (skip app chrome JS)
-4. **HGT-89** — Slim poll GET API payload
-5. **HGT-90** — Performance baseline + monitoring targets
+1. **HGT-85** — Lazy-load ideas board below the fold
+2. **HGT-86** — Lightweight layout for `/p/*` (skip app chrome JS)
+3. **HGT-89** — Slim poll GET API payload
+4. **HGT-90** — Performance baseline + monitoring targets
 
 ---
 

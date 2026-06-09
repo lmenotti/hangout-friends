@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import Script from 'next/script'
 import './globals.css'
 import { UserProvider } from '@/context/UserContext'
 import Nav from '@/components/Nav'
@@ -48,11 +47,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <InstallPrompt />
             <PushNotificationPrompt />
         </UserProvider>
-        <Script
-          id="google-maps"
-          src={`https://maps.googleapis.com/maps/api/js?key=${process.env.GOOGLE_MAPS_API_KEY}&libraries=places`}
-          strategy="afterInteractive"
-        />
         <Analytics />
         <SpeedInsights />
       </body>

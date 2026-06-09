@@ -1,16 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { loadGoogleMaps, prefersPlacesServerFallback } from '@/lib/loadGoogleMaps'
 
 interface Props {
   value: string
   onChange: (value: string) => void
   placeholder?: string
   className?: string
-}
-
-declare global {
-  interface Window { google: any }
 }
 
 export default function PlacesInput({ value, onChange, placeholder, className }: Props) {
@@ -34,12 +31,28 @@ export default function PlacesInput({ value, onChange, placeholder, className }:
     }
   }, [value])
 
-  // Initialize Google Places Autocomplete (or fall back after timeout)
+  // Google Places widget on desktop; server autocomplete on mobile / when Maps JS unavailable
   useEffect(() => {
+    if (prefersPlacesServerFallback()) {
+      setUseFallback(true)
+      return
+    }
+
+    let cancelled = false
+
     const init = () => {
       if (!inputRef.current || !window.google?.maps?.places || autocompleteRef.current) return
       try {
-        autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
+        const places = window.google.maps.places as {
+          Autocomplete: new (
+            input: HTMLInputElement,
+            opts: { fields: string[] },
+          ) => {
+            addListener: (event: string, handler: () => void) => void
+            getPlace: () => { formatted_address?: string; name?: string }
+          }
+        }
+        autocompleteRef.current = new places.Autocomplete(inputRef.current, {
           fields: ['formatted_address', 'name'],
         })
         autocompleteRef.current.addListener('place_changed', () => {
@@ -48,27 +61,19 @@ export default function PlacesInput({ value, onChange, placeholder, className }:
           if (address) onChangeRef.current(address)
         })
       } catch {
-        setUseFallback(true)
+        if (!cancelled) setUseFallback(true)
       }
     }
 
-    if (window.google?.maps?.places) {
-      init()
-      return
-    }
+    void loadGoogleMaps().then(ok => {
+      if (cancelled) return
+      if (ok) init()
+      else setUseFallback(true)
+    })
 
-    let elapsed = 0
-    const interval = setInterval(() => {
-      elapsed += 200
-      if (window.google?.maps?.places) {
-        clearInterval(interval)
-        init()
-      } else if (elapsed >= 5000) {
-        clearInterval(interval)
-        setUseFallback(true)
-      }
-    }, 200)
-    return () => clearInterval(interval)
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   // Server-side fallback: fetch suggestions from our API route

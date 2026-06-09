@@ -110,7 +110,7 @@ Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo
 - **Tailwind CSS v4**
 - **Supabase** (Postgres + RLS, no Supabase Auth — custom token + magic link sessions)
 - **Vercel** (hosting, automatic deploys from `main`)
-- **Google Maps API** — travel time estimates on ideas (optional)
+- **Google Maps API** — Places autocomplete on profile (`PlacesInput`, loaded on demand); travel time estimates on ideas (optional, server-side)
 - **Anthropic Claude** — admin bug-report fix suggestions (optional)
 
 ---
@@ -260,7 +260,8 @@ app/
     google/               # Google Calendar OAuth (auth + callback)
     ideas/                # Ideas + voting (legacy global)
     og/                   # Dynamic OG image generation for plan links
-    places/autocomplete/  # Google Places autocomplete for idea locations
+    places/autocomplete/  # Server-side Places suggestions (mobile PlacesInput fallback)
+    places/maps-script/   # Returns Maps JS URL when PlacesInput loads on desktop
     pods/                 # Pod CRUD, pod-scoped ideas and events
     polls/                # Plan CRUD and availability responses
     travel-time/          # Google Maps travel time lookup
@@ -361,13 +362,13 @@ Linear project: [Performance & Optimization](https://linear.app/hangout-friends/
 
 **North star:** be the fast option in group scheduling — speed is a product feature on the anonymous `/p/[slug]` path (PRODUCT.md: <1s load on 4G, <30s to mark availability).
 
-**Critical path today:** `/p/[slug]` SSR passes `initialData` (HGT-83/87 done); ideas may still client-fetch. **Still open:** global Google Maps JS in root layout (HGT-82), below-fold lazy load (HGT-85), lightweight plan layout (HGT-86).
+**Critical path today:** `/p/[slug]` SSR passes `initialData` (HGT-83/87 done); ideas may still client-fetch. **HGT-82 done:** Google Maps JS removed from root layout — loaded only when `PlacesInput` mounts (desktop); mobile uses `/api/places/autocomplete`. **Still open:** below-fold lazy load (HGT-85), lightweight plan layout (HGT-86).
 
 **Top issues filed (priority order):**
 
 | Issue | What |
 |-------|------|
-| **HGT-82** | Remove global Google Maps JS from root layout |
+| **HGT-82** | ~~Remove global Google Maps JS from root layout~~ — done: dynamic load in `PlacesInput` via `lib/loadGoogleMaps.ts` + `/api/places/maps-script` |
 | **HGT-83** | SSR initial poll data on `/p/[slug]` — eliminate client waterfall |
 | **HGT-84** | DB indexes on `poll_responses`, `poll_rsvps`, `poll_idea_votes` |
 | **HGT-85** | Lazy-load ideas board below the fold |
