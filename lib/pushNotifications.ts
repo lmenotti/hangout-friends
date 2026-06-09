@@ -1,6 +1,7 @@
 import webpush from 'web-push'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
 import { formatScheduledLabel } from '@/lib/formatScheduledLabel'
+import type { PlanWatchEntry, PushSubscription } from '@/types/database'
 
 /**
  * VAPID keys (Web Push):
@@ -21,11 +22,7 @@ export type PushNotificationType = (typeof PUSH_NOTIFICATION_TYPES)[number]
 
 const ALLOWED = new Set<string>(PUSH_NOTIFICATION_TYPES)
 
-export type PlanWatch = {
-  poll_id: string
-  role: 'creator' | 'rsvp'
-  respondent_name?: string
-}
+export type PlanWatch = PlanWatchEntry
 
 type PushMessage = {
   title: string
@@ -55,12 +52,7 @@ export type PushPayloadMap = {
   }
 }
 
-type PushSubscriptionRow = {
-  id: string
-  endpoint: string
-  p256dh: string
-  auth: string
-}
+type PushSubscriptionRow = Pick<PushSubscription, 'id' | 'endpoint' | 'p256dh' | 'auth'>
 
 function planUrl(slug: string): string {
   const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://hangout-friends.vercel.app'

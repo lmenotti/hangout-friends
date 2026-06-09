@@ -1,21 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-
-type BugReport = {
-  id: string
-  title: string
-  description: string | null
-  reporter_name: string
-  reported_at: string
-  resolved: boolean
-}
+import type { BugReportWithReporter } from '@/types/database'
 
 type AdminData = {
   users: { id: string; name: string; created_at: string }[]
   ideas: { id: string; title: string; description: string | null; creator_name: string; vote_count: number; created_at: string }[]
   events: { id: string; title: string; scheduled_at: string | null; created_at: string }[]
-  bug_reports: BugReport[]
+  bug_reports: BugReportWithReporter[]
 }
 
 function formatDate(iso: string) {
@@ -63,7 +55,7 @@ function Row({ label, sub, onDelete }: { label: string; sub?: string; onDelete: 
   )
 }
 
-function BugRow({ bug, pin, onUpdate }: { bug: BugReport; pin: string; onUpdate: () => void }) {
+function BugRow({ bug, pin, onUpdate }: { bug: BugReportWithReporter; pin: string; onUpdate: () => void }) {
   const [confirming, setConfirming] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [suggestion, setSuggestion] = useState('')

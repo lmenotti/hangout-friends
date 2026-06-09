@@ -7,8 +7,8 @@ import { useUser } from '@/context/UserContext'
 import AvailabilityGrid from '@/components/AvailabilityGrid'
 import PodIdeasTab from '@/components/PodIdeasTab'
 import PodEventsTab from '@/components/PodEventsTab'
+import type { Pod } from '@/types/database'
 
-type Pod = { id: string; name: string; invite_code: string; created_at: string }
 type Member = { role: string; joined_at: string; users: { id: string; name: string; last_seen: string | null } }
 
 type Tab = 'availability' | 'ideas' | 'events' | 'members'

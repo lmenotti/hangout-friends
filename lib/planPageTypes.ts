@@ -1,26 +1,21 @@
 import type { PollIdea } from '@/components/PollIdeasBoard'
+import type { Poll, PollResponse, PollRsvp } from '@/types/database'
 
-export type PlanPagePoll = {
-  id: string
-  title: string
-  creator_name: string
-  date_options: string[]
-  status: 'polling' | 'scheduled'
-  scheduled_at: string | null
-  scheduled_end_at: string | null
-  scheduled_slot_key: string | null
-}
+export type PlanPagePoll = Pick<
+  Poll,
+  | 'id'
+  | 'title'
+  | 'creator_name'
+  | 'date_options'
+  | 'status'
+  | 'scheduled_at'
+  | 'scheduled_end_at'
+  | 'scheduled_slot_key'
+>
 
-export type PlanPageResponse = {
-  id: string
-  respondent_name: string
-  availability: Record<string, boolean>
-}
+export type PlanPageResponse = Pick<PollResponse, 'id' | 'respondent_name' | 'availability'>
 
-export type PlanPageRsvp = {
-  respondent_name: string
-  status: 'yes' | 'maybe' | 'no'
-}
+export type PlanPageRsvp = Pick<PollRsvp, 'respondent_name' | 'status'>
 
 export type PlanPageInitialData = {
   poll: PlanPagePoll

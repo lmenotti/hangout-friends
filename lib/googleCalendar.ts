@@ -7,6 +7,7 @@ import {
   type DisplayNameSource,
 } from '@/lib/displayName'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
+import type { GoogleBusyCache, User } from '@/types/database'
 
 export const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly'
 export const GOOGLE_PROFILE_SCOPE = 'https://www.googleapis.com/auth/userinfo.profile'
@@ -16,22 +17,19 @@ export type BusyInterval = {
   end: string
 }
 
-type BusyCacheEntry = {
-  timeMin: string
-  timeMax: string
-  busy: BusyInterval[]
-}
+type BusyCacheEntry = GoogleBusyCache
 
 const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
 
-type GoogleTokenRow = {
-  id: string
-  google_access_token: string | null
-  google_refresh_token: string | null
-  google_scope: string | null
-  google_token_type: string | null
-  google_expiry_date: number | null
-}
+type GoogleTokenRow = Pick<
+  User,
+  | 'id'
+  | 'google_access_token'
+  | 'google_refresh_token'
+  | 'google_scope'
+  | 'google_token_type'
+  | 'google_expiry_date'
+>
 
 function getBaseUrl(): string {
   return (process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000').replace(/\/$/, '')

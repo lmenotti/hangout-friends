@@ -294,7 +294,7 @@ public/
 scripts/
   migrate.mjs             # Migration runner (Supabase Management API)
 types/
-  database.ts             # Supabase table types + extended query types
+  database.ts             # Supabase table types (all migrated tables) + row aliases + API shapes
 ```
 
 ---
@@ -319,6 +319,7 @@ Synced with [Linear](https://linear.app/hangout-friends). Full agent/QA breakdow
 | **HGT-11/13** | Email + magic link auth; legacy name+password removed |
 | **HGT-22** | Top-3 auto-schedule picker (preview → confirm) |
 | **HGT-50/53/48** | Autosave grid fix; creator cookie + `?fill=1` after plan create |
+| **HGT-125** | `types/database.ts` covers all migrated tables; routes/libs use canonical row aliases where low-risk |
 
 Dev verification: `npm run verify:021` · `npm run test:plan-loop` · `npm run build`
 

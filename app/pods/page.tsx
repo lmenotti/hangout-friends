@@ -3,12 +3,11 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useUser } from '@/context/UserContext'
-
-type Pod = { id: string; name: string; invite_code: string; member_count: number; role: string; created_at: string }
+import type { PodWithMembership } from '@/types/database'
 
 export default function PodsPage() {
   const { user, token } = useUser()
-  const [pods, setPods] = useState<Pod[]>([])
+  const [pods, setPods] = useState<PodWithMembership[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

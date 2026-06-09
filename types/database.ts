@@ -1,3 +1,16 @@
+/** JSONB column shapes used across tables. */
+export type PollAvailability = Record<string, boolean>
+export type PlanWatchEntry = {
+  poll_id: string
+  role: 'creator' | 'rsvp'
+  respondent_name?: string
+}
+export type GoogleBusyCache = {
+  timeMin: string
+  timeMax: string
+  busy: { start: string; end: string }[]
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -9,12 +22,15 @@ export type Database = {
           email: string | null
           created_at: string
           home_location: string | null
+          last_seen: string | null
           google_access_token: string | null
           google_refresh_token: string | null
           google_scope: string | null
           google_token_type: string | null
           google_expiry_date: number | null
-          name_source: string | null
+          google_busy_cache: GoogleBusyCache | null
+          google_busy_cached_at: string | null
+          name_source: 'plan_identity' | 'derived' | 'email_local' | 'google' | 'manual' | null
         }
         Insert: {
           id?: string
@@ -23,12 +39,15 @@ export type Database = {
           email?: string | null
           created_at?: string
           home_location?: string | null
+          last_seen?: string | null
           google_access_token?: string | null
           google_refresh_token?: string | null
           google_scope?: string | null
           google_token_type?: string | null
           google_expiry_date?: number | null
-          name_source?: string | null
+          google_busy_cache?: GoogleBusyCache | null
+          google_busy_cached_at?: string | null
+          name_source?: 'plan_identity' | 'derived' | 'email_local' | 'google' | 'manual' | null
         }
         Update: {
           id?: string
@@ -37,12 +56,15 @@ export type Database = {
           email?: string | null
           created_at?: string
           home_location?: string | null
+          last_seen?: string | null
           google_access_token?: string | null
           google_refresh_token?: string | null
           google_scope?: string | null
           google_token_type?: string | null
           google_expiry_date?: number | null
-          name_source?: string | null
+          google_busy_cache?: GoogleBusyCache | null
+          google_busy_cached_at?: string | null
+          name_source?: 'plan_identity' | 'derived' | 'email_local' | 'google' | 'manual' | null
         }
       }
       magic_link_tokens: {
@@ -108,6 +130,7 @@ export type Database = {
           created_by: string | null
           created_by_name: string | null
           poll_id: string | null
+          pod_id: string | null
           created_at: string
           duration_minutes: number | null
           is_outdoor: boolean | null
@@ -118,6 +141,11 @@ export type Database = {
           is_scheduled: boolean
           suggested_at: string | null
           travel_origin: string | null
+          status: 'open' | 'scheduled' | 'archived'
+          suggested_place: string | null
+          proposed_date: string | null
+          proposed_time: string | null
+          vote_count: number
         }
         Insert: {
           id?: string
@@ -126,6 +154,7 @@ export type Database = {
           created_by?: string | null
           created_by_name?: string | null
           poll_id?: string | null
+          pod_id?: string | null
           created_at?: string
           duration_minutes?: number | null
           is_outdoor?: boolean | null
@@ -136,6 +165,11 @@ export type Database = {
           is_scheduled?: boolean
           suggested_at?: string | null
           travel_origin?: string | null
+          status?: 'open' | 'scheduled' | 'archived'
+          suggested_place?: string | null
+          proposed_date?: string | null
+          proposed_time?: string | null
+          vote_count?: number
         }
         Update: {
           id?: string
@@ -144,6 +178,7 @@ export type Database = {
           created_by?: string | null
           created_by_name?: string | null
           poll_id?: string | null
+          pod_id?: string | null
           created_at?: string
           duration_minutes?: number | null
           is_outdoor?: boolean | null
@@ -154,26 +189,36 @@ export type Database = {
           is_scheduled?: boolean
           suggested_at?: string | null
           travel_origin?: string | null
+          status?: 'open' | 'scheduled' | 'archived'
+          suggested_place?: string | null
+          proposed_date?: string | null
+          proposed_time?: string | null
+          vote_count?: number
         }
       }
       idea_votes: {
         Row: {
           idea_id: string
           user_id: string
+          created_at: string
         }
         Insert: {
           idea_id: string
           user_id: string
+          created_at?: string
         }
         Update: {
           idea_id?: string
           user_id?: string
+          created_at?: string
         }
       }
       events: {
         Row: {
           id: string
           idea_id: string | null
+          source_idea_id: string | null
+          pod_id: string | null
           title: string
           description: string | null
           scheduled_at: string | null
@@ -181,10 +226,15 @@ export type Database = {
           location: string | null
           created_at: string
           created_by: string | null
+          recurrence_rule: string | null
+          recurrence_end: string | null
+          parent_event_id: string | null
         }
         Insert: {
           id?: string
           idea_id?: string | null
+          source_idea_id?: string | null
+          pod_id?: string | null
           title: string
           description?: string | null
           scheduled_at?: string | null
@@ -192,10 +242,15 @@ export type Database = {
           location?: string | null
           created_at?: string
           created_by?: string | null
+          recurrence_rule?: string | null
+          recurrence_end?: string | null
+          parent_event_id?: string | null
         }
         Update: {
           id?: string
           idea_id?: string | null
+          source_idea_id?: string | null
+          pod_id?: string | null
           title?: string
           description?: string | null
           scheduled_at?: string | null
@@ -203,6 +258,9 @@ export type Database = {
           location?: string | null
           created_at?: string
           created_by?: string | null
+          recurrence_rule?: string | null
+          recurrence_end?: string | null
+          parent_event_id?: string | null
         }
       }
       rsvps: {
@@ -236,7 +294,66 @@ export type Database = {
           scheduled_slot_key: string | null
           expires_at: string | null
           archived_at: string | null
+          creator_token: string | null
+          creator_user_id: string | null
           created_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          creator_name: string
+          date_options?: string[]
+          slug?: string
+          status?: 'polling' | 'scheduled'
+          scheduled_at?: string | null
+          scheduled_end_at?: string | null
+          scheduled_idea_id?: string | null
+          scheduled_slot_key?: string | null
+          expires_at?: string | null
+          archived_at?: string | null
+          creator_token?: string | null
+          creator_user_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          creator_name?: string
+          date_options?: string[]
+          slug?: string
+          status?: 'polling' | 'scheduled'
+          scheduled_at?: string | null
+          scheduled_end_at?: string | null
+          scheduled_idea_id?: string | null
+          scheduled_slot_key?: string | null
+          expires_at?: string | null
+          archived_at?: string | null
+          creator_token?: string | null
+          creator_user_id?: string | null
+          created_at?: string
+        }
+      }
+      poll_responses: {
+        Row: {
+          id: string
+          poll_id: string
+          respondent_name: string
+          availability: PollAvailability
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          poll_id: string
+          respondent_name: string
+          availability?: PollAvailability
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          poll_id?: string
+          respondent_name?: string
+          availability?: PollAvailability
+          created_at?: string
         }
       }
       poll_rsvps: {
@@ -247,12 +364,131 @@ export type Database = {
           created_at: string
           updated_at: string
         }
+        Insert: {
+          poll_id: string
+          respondent_name: string
+          status: 'yes' | 'maybe' | 'no'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          poll_id?: string
+          respondent_name?: string
+          status?: 'yes' | 'maybe' | 'no'
+          created_at?: string
+          updated_at?: string
+        }
       }
       poll_idea_votes: {
         Row: {
           idea_id: string
           respondent_name: string
           created_at: string
+        }
+        Insert: {
+          idea_id: string
+          respondent_name: string
+          created_at?: string
+        }
+        Update: {
+          idea_id?: string
+          respondent_name?: string
+          created_at?: string
+        }
+      }
+      pods: {
+        Row: {
+          id: string
+          name: string
+          invite_code: string
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          invite_code: string
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          invite_code?: string
+          created_by?: string | null
+          created_at?: string
+        }
+      }
+      pod_members: {
+        Row: {
+          pod_id: string
+          user_id: string
+          role: 'owner' | 'member'
+          joined_at: string
+        }
+        Insert: {
+          pod_id: string
+          user_id: string
+          role?: 'owner' | 'member'
+          joined_at?: string
+        }
+        Update: {
+          pod_id?: string
+          user_id?: string
+          role?: 'owner' | 'member'
+          joined_at?: string
+        }
+      }
+      bug_reports: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          reported_by: string | null
+          reported_at: string
+          resolved: boolean
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          reported_by?: string | null
+          reported_at?: string
+          resolved?: boolean
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          reported_by?: string | null
+          reported_at?: string
+          resolved?: boolean
+        }
+      }
+      google_calendar_channels: {
+        Row: {
+          id: string
+          user_id: string
+          channel_id: string
+          resource_id: string
+          expires_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          channel_id: string
+          resource_id: string
+          expires_at: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          channel_id?: string
+          resource_id?: string
+          expires_at?: string
+          created_at?: string
         }
       }
       push_subscriptions: {
@@ -263,7 +499,7 @@ export type Database = {
           auth: string
           user_id: string | null
           device_id: string | null
-          plan_watches: { poll_id: string; role: 'creator' | 'rsvp'; respondent_name?: string }[]
+          plan_watches: PlanWatchEntry[]
           created_at: string
         }
         Insert: {
@@ -273,7 +509,7 @@ export type Database = {
           auth: string
           user_id?: string | null
           device_id?: string | null
-          plan_watches?: { poll_id: string; role: 'creator' | 'rsvp'; respondent_name?: string }[]
+          plan_watches?: PlanWatchEntry[]
           created_at?: string
         }
         Update: {
@@ -283,7 +519,7 @@ export type Database = {
           auth?: string
           user_id?: string | null
           device_id?: string | null
-          plan_watches?: { poll_id: string; role: 'creator' | 'rsvp'; respondent_name?: string }[]
+          plan_watches?: PlanWatchEntry[]
           created_at?: string
         }
       }
@@ -301,6 +537,15 @@ export type Idea = Database['public']['Tables']['ideas']['Row']
 export type Event = Database['public']['Tables']['events']['Row']
 export type RSVP = Database['public']['Tables']['rsvps']['Row']
 export type Availability = Database['public']['Tables']['availability']['Row']
+export type Poll = Database['public']['Tables']['polls']['Row']
+export type PollResponse = Database['public']['Tables']['poll_responses']['Row']
+export type PollRsvp = Database['public']['Tables']['poll_rsvps']['Row']
+export type PollIdeaVote = Database['public']['Tables']['poll_idea_votes']['Row']
+export type Pod = Database['public']['Tables']['pods']['Row']
+export type PodMember = Database['public']['Tables']['pod_members']['Row']
+export type BugReport = Database['public']['Tables']['bug_reports']['Row']
+export type GoogleCalendarChannel = Database['public']['Tables']['google_calendar_channels']['Row']
+export type PushSubscription = Database['public']['Tables']['push_subscriptions']['Row']
 
 export type IdeaWithVotes = Idea & {
   vote_count: number
@@ -329,4 +574,15 @@ export type EventWithRSVPs = Event & {
   rsvp_yes_names: string[]
   rsvp_maybe_names: string[]
   rsvp_no_names: string[]
+}
+
+/** Pod list item returned from GET /api/pods (membership join + member count). */
+export type PodWithMembership = Pod & {
+  role: PodMember['role']
+  member_count: number
+}
+
+/** Bug report with reporter display name (admin API). */
+export type BugReportWithReporter = BugReport & {
+  reporter_name: string
 }

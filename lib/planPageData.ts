@@ -9,23 +9,25 @@ import type {
   PlanPageResponse,
   PlanPageRsvp,
 } from '@/lib/planPageTypes'
+import type { Poll } from '@/types/database'
 
 export type { PlanPageInitialData, PlanPagePoll, PlanPageResponse, PlanPageRsvp } from '@/lib/planPageTypes'
 
-export type PollSlugRow = {
-  id: string
-  title: string
-  creator_name: string
-  status: 'polling' | 'scheduled'
-  scheduled_at: string | null
-  scheduled_end_at: string | null
-  expires_at: string | null
-  archived_at: string | null
-  scheduled_idea_id: string | null
-  creator_token: string | null
-  date_options: string[]
-  scheduled_slot_key: string | null
-}
+export type PollSlugRow = Pick<
+  Poll,
+  | 'id'
+  | 'title'
+  | 'creator_name'
+  | 'status'
+  | 'scheduled_at'
+  | 'scheduled_end_at'
+  | 'expires_at'
+  | 'archived_at'
+  | 'scheduled_idea_id'
+  | 'creator_token'
+  | 'date_options'
+  | 'scheduled_slot_key'
+>
 
 function computeAggregate(responses: PlanPageResponse[]): Record<string, number> {
   const aggregate: Record<string, number> = {}

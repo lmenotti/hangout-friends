@@ -1,15 +1,13 @@
 import { formatScheduledLabel } from '@/lib/formatScheduledLabel'
 import { geocodeLocation, fetchWeatherMap, lookupWeatherScore } from '@/lib/weather'
+import type { PollResponse } from '@/types/database'
 
 export { formatScheduledLabel } from '@/lib/formatScheduledLabel'
 
 const START_HOUR = 9
 const END_HOUR = 21
 
-export type PollResponseRow = {
-  respondent_name: string
-  availability: Record<string, boolean>
-}
+export type PollResponseRow = Pick<PollResponse, 'respondent_name' | 'availability'>
 
 export type PollIdeaRow = {
   id: string

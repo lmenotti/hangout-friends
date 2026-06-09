@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
+import type { Pod, PodWithMembership } from '@/types/database'
 
 async function getUserFromToken(token: string | null) {
   if (!token) return null
@@ -33,8 +34,8 @@ export async function GET(req: NextRequest) {
     counts[m.pod_id] = (counts[m.pod_id] ?? 0) + 1
   }
 
-  const pods = (memberships ?? []).map(m => ({
-    ...(m.pods as any),
+  const pods: PodWithMembership[] = (memberships ?? []).map(m => ({
+    ...(m.pods as unknown as Pod),
     role: m.role,
     member_count: counts[m.pod_id] ?? 1,
   }))

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminPin } from '@/lib/requireAdminPin'
 import { supabaseAdmin as supabase } from '@/lib/supabase'
+import type { BugReport, BugReportWithReporter } from '@/types/database'
 
 export async function GET(req: NextRequest) {
   const authError = requireAdminPin(req)
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
   const creatorMap: Record<string, string> = {}
   for (const c of creators ?? []) creatorMap[c.id] = c.name
 
-  const reporterIds = [...new Set((bugsRes.data ?? []).map((b: any) => b.reported_by).filter(Boolean))]
+  const reporterIds = [...new Set((bugsRes.data ?? []).map((b: BugReport) => b.reported_by).filter(Boolean))]
   const { data: reporters } = reporterIds.length > 0
     ? await supabase.from('users').select('id, name').in('id', reporterIds)
     : { data: [] }
@@ -35,9 +36,9 @@ export async function GET(req: NextRequest) {
       vote_count: i.idea_votes?.length ?? 0,
     })),
     events: eventsRes.data ?? [],
-    bug_reports: (bugsRes.data ?? []).map((b: any) => ({
+    bug_reports: (bugsRes.data ?? []).map((b: BugReport): BugReportWithReporter => ({
       ...b,
-      reporter_name: reporterMap[b.reported_by] ?? 'Unknown',
+      reporter_name: reporterMap[b.reported_by ?? ''] ?? 'Unknown',
     })),
   })
 }
