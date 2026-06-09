@@ -53,7 +53,7 @@ The atomic unit is a **plan**: a shareable URL anyone can respond to without cre
 | Link shell | HGT-6/7/8/10/23–26/35/44 | Slug URLs, mobile grid, no NameModal on plan pages, hidden nav chrome |
 | Plan lifecycle | HGT-18/19/20 | Ideas, auto-schedule + lock, RSVP + heatmap drill-down — E2E passes |
 | OG previews | HGT-21 | Code shipped; platform verify (iMessage, WhatsApp, Discord, Slack) deferred to human QA |
-| PWA | HGT-27 | `manifest.json`, icons, `InstallPrompt` |
+| PWA | HGT-27, HGT-152 | `manifest.json`, branded icons (`app/favicon.ico`, `app/icon.png`, `app/apple-icon.png`, `public/icons/*`), `InstallPrompt` — HGT-152 replaced MVP placeholder “H” icons with mascot assets |
 | Cookie identity | HGT-15 | Per-plan httpOnly cookie via `lib/planIdentity.ts` |
 | Plan expiration | migration 022 | Daily cron archives plans past `expires_at` |
 | Google Calendar | HGT-29/34 | OAuth routes live; prod smoke test deferred |
