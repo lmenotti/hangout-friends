@@ -15,8 +15,9 @@ async function assertMember(podId: string, userId: string) {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string; ideaId: string }> }) {
   const { id: podId, ideaId } = await params
   const user = await getUserFromToken(req.headers.get('x-user-token'))
-  if (!user || !await assertMember(podId, user.id)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await assertMember(podId, user.id)) {
+    return NextResponse.json({ error: 'Not a member' }, { status: 403 })
   }
 
   const { data: existing } = await supabase

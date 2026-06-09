@@ -82,7 +82,7 @@ Legacy global surfaces (`/availability`, `/ideas`, `/events`) remain in the repo
 - Create a named pod, share a join link
 - Pod-scoped ideas, events, and availability
 - Pod-level auto-scheduling
-- Pod idea vote/schedule API routes enforce `pod_members` membership (HGT-107), same as ideas/events list routes
+- Pod idea vote/schedule API routes enforce `pod_members` membership before mutation (HGT-107); non-members get **403**, unauthenticated **401** — same pattern as `GET /api/pods/[id]`
 
 ### Auth
 - **Plans:** per-plan httpOnly cookie + first name (`lib/planIdentity.ts`) — no account required
