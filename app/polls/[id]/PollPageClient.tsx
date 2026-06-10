@@ -175,6 +175,18 @@ export default function PollPageClient({
     Promise.all([fetchPoll(), fetchIdeas()]).finally(() => setLoading(false))
   }, [fetchPoll, fetchIdeas, initialData, applyReturningIdentity])
 
+  // Refetch when the page becomes visible again (PWA app-switch, tab return).
+  // Keeps heatmap, responses, and idea votes fresh without a full reload.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') {
+        void Promise.all([fetchPoll(), fetchIdeas()])
+      }
+    }
+    document.addEventListener('visibilitychange', refresh)
+    return () => document.removeEventListener('visibilitychange', refresh)
+  }, [fetchPoll, fetchIdeas])
+
   // After plan creation (?fill=1), open the grid once identity cookie + name are ready.
   // Skip if the user already has a saved response — e.g. they refreshed with ?fill=1 still in the URL.
   useEffect(() => {

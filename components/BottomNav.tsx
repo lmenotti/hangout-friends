@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { useUser } from '@/context/UserContext'
 import { isPlanRespondPage } from '@/lib/planRoutes'
 
@@ -67,8 +68,15 @@ const signInTab = {
 export default function BottomNav() {
   const pathname = usePathname()
   const { user, loading } = useUser()
+  const [isPwa, setIsPwa] = useState(false)
 
-  if (pathname === '/admin' || isPlanRespondPage(pathname)) return null
+  useEffect(() => {
+    setIsPwa(window.matchMedia('(display-mode: standalone)').matches)
+  }, [])
+
+  // Hide nav on plan pages in browser — keeps the anonymous respond path clean.
+  // In PWA standalone mode there's no browser chrome, so show nav so users aren't trapped.
+  if (pathname === '/admin' || (isPlanRespondPage(pathname) && !isPwa)) return null
 
   // While auth is resolving keep showing Profile to avoid a tab label flash.
   const lastTab = loading || user ? profileTab : signInTab
