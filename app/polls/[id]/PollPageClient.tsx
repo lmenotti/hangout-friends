@@ -176,12 +176,13 @@ export default function PollPageClient({
   }, [fetchPoll, fetchIdeas, initialData, applyReturningIdentity])
 
   // After plan creation (?fill=1), open the grid once identity cookie + name are ready.
+  // Skip if the user already has a saved response — e.g. they refreshed with ?fill=1 still in the URL.
   useEffect(() => {
     if (!openFillFromCreateRef.current || loading || poll?.status === 'scheduled') return
     if (!name.trim()) return
     openFillFromCreateRef.current = false
-    setEditing(true)
-  }, [loading, name, poll?.status])
+    if (mySlots.size === 0) setEditing(true)
+  }, [loading, name, mySlots, poll?.status])
 
   // Reset the calendar fetch guard when editing closes so re-opening the grid
   // after a calendar change (webhook-invalidated cache) picks up fresh data.
