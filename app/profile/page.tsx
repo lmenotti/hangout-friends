@@ -5,7 +5,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
 import PlacesInput from '@/components/PlacesInput'
+import { pushSupported, requestPushPermissionAndSync } from '@/lib/pushSubscribeClient'
 import type { UserPublic } from '@/types/database'
+
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''
 
 const CALENDAR_MESSAGES: Record<string, { text: string; tone: 'ok' | 'err' }> = {
   connected: { text: 'Google Calendar connected.', tone: 'ok' },
@@ -29,6 +32,8 @@ export default function ProfilePage() {
   const [error, setError] = useState('')
   const [calendarLoading, setCalendarLoading] = useState(false)
   const [calendarMessage, setCalendarMessage] = useState<{ text: string; tone: 'ok' | 'err' } | null>(null)
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>('unsupported')
+  const [pushBusy, setPushBusy] = useState(false)
 
   useEffect(() => {
     const status = new URLSearchParams(window.location.search).get('calendar')
@@ -55,6 +60,21 @@ export default function ProfilePage() {
   useEffect(() => {
     setHomeLocation(user?.home_location ?? '')
   }, [user?.home_location])
+
+  useEffect(() => {
+    if (pushSupported()) setPushPermission(Notification.permission)
+  }, [])
+
+  const handleEnablePush = async () => {
+    if (!VAPID_PUBLIC_KEY) return
+    setPushBusy(true)
+    try {
+      const result = await requestPushPermissionAndSync(VAPID_PUBLIC_KEY)
+      setPushPermission(result)
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   if (!user) {
     return (
@@ -263,6 +283,36 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
+
+        {/* Notifications */}
+        {pushPermission !== 'unsupported' && (
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 space-y-3">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Notifications</p>
+              <p className="mt-0.5 text-xs text-zinc-600">
+                Get notified when friends respond or a plan is scheduled.
+              </p>
+            </div>
+            {pushPermission === 'granted' && (
+              <p className="text-sm text-emerald-400">Notifications enabled</p>
+            )}
+            {pushPermission === 'denied' && (
+              <p className="text-sm text-zinc-400">
+                Blocked in your browser settings — re-enable in your device&apos;s notification settings to turn these on.
+              </p>
+            )}
+            {pushPermission === 'default' && (
+              <button
+                type="button"
+                onClick={() => void handleEnablePush()}
+                disabled={pushBusy}
+                className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-medium py-3 transition-colors touch-manipulation"
+              >
+                {pushBusy ? 'Enabling…' : 'Enable notifications'}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Links & actions */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 divide-y divide-zinc-800">

@@ -335,11 +335,20 @@ export default function PollPageClient({
     return { free, busy, noMark }
   }, [responses])
 
-  const handleNameSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const commitName = useCallback(() => {
     if (!name.trim()) return
     setNameRequired(false)
     if (poll?.status !== 'scheduled') setEditing(true)
+  }, [name, poll?.status])
+
+  const handleNameSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    commitName()
+  }
+
+  const handleNameBlur = () => {
+    // On desktop (no touch keyboard), blur == done — skip the "Go" button click.
+    if (!window.matchMedia('(max-width: 767px)').matches) commitName()
   }
 
   const scheduleOptionKey = (option: SchedulePickerOption) =>
@@ -797,6 +806,7 @@ export default function PollPageClient({
             maxLength={40}
             autoComplete="given-name"
             inputMode="text"
+            onBlur={handleNameBlur}
             className="flex-1 bg-transparent text-zinc-100 placeholder-zinc-500 focus:outline-none text-base min-h-[44px]"
           />
           <button

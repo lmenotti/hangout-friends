@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import PlacesInput from '@/components/PlacesInput'
 
 export type PollIdea = {
@@ -58,6 +58,11 @@ export default function PollIdeasBoard({
 
   const [expandedVoters, setExpandedVoters] = useState<Set<string>>(new Set())
 
+  // Optimistic shadow — overrides the `ideas` prop until the parent re-syncs.
+  const [localIdeas, setLocalIdeas] = useState<PollIdea[] | null>(null)
+  const displayIdeas = localIdeas ?? ideas
+  useEffect(() => { setLocalIdeas(null) }, [ideas])
+
   const addIdea = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
@@ -100,12 +105,29 @@ export default function PollIdeasBoard({
       onNeedName()
       return
     }
+    const nameTrimmed = name.trim()
+    const nameLow = nameTrimmed.toLowerCase()
+
+    // Optimistic update — flip count and voter list immediately.
+    const snapshot = displayIdeas
+    setLocalIdeas(snapshot.map(idea => {
+      if (idea.id !== ideaId) return idea
+      const alreadyVoted = idea.voter_names.some(v => v.toLowerCase() === nameLow)
+      return alreadyVoted
+        ? { ...idea, vote_count: Math.max(0, idea.vote_count - 1), voter_names: idea.voter_names.filter(v => v.toLowerCase() !== nameLow) }
+        : { ...idea, vote_count: idea.vote_count + 1, voter_names: [...idea.voter_names, nameTrimmed] }
+    }))
+
     const res = await fetch(`/api/polls/${pollId}/ideas/${ideaId}/vote`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ respondent_name: name.trim() }),
+      body: JSON.stringify({ respondent_name: nameTrimmed }),
     })
-    if (res.ok) onIdeasChange()
+    if (res.ok) {
+      onIdeasChange() // parent refetch → new ideas prop → useEffect clears localIdeas
+    } else {
+      setLocalIdeas(null) // rollback on failure
+    }
   }
 
   const toggleVoterExpand = (id: string) => {
@@ -123,6 +145,7 @@ export default function PollIdeasBoard({
   }
 
   const nameLower = name.trim().toLowerCase()
+  const hasIdeas = displayIdeas.length > 0
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-4">
@@ -235,11 +258,11 @@ export default function PollIdeasBoard({
         </form>
       )}
 
-      {ideas.length === 0 ? (
+      {!hasIdeas ? (
         <p className="text-sm text-zinc-600 text-center py-4">No ideas yet — add the first one.</p>
       ) : (
         <ul className="space-y-2">
-          {ideas.map(idea => {
+          {displayIdeas.map(idea => {
             const voted = nameLower
               ? idea.voter_names.some(v => v.toLowerCase() === nameLower)
               : false

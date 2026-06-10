@@ -33,9 +33,14 @@ export default function PushNotificationPrompt() {
       return
     }
     try {
-      if (localStorage.getItem(DISMISS_KEY) === '1') {
-        setVisible(false)
-        return
+      const dismissedAt = localStorage.getItem(DISMISS_KEY)
+      if (dismissedAt) {
+        const elapsed = Date.now() - parseInt(dismissedAt, 10)
+        if (elapsed < 7 * 24 * 60 * 60 * 1000) {
+          setVisible(false)
+          return
+        }
+        localStorage.removeItem(DISMISS_KEY) // cooldown expired — allow re-prompt
       }
     } catch {
       setVisible(false)
@@ -65,7 +70,7 @@ export default function PushNotificationPrompt() {
 
   const dismiss = () => {
     try {
-      localStorage.setItem(DISMISS_KEY, '1')
+      localStorage.setItem(DISMISS_KEY, String(Date.now()))
     } catch {
       /* ignore */
     }
